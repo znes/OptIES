@@ -7,7 +7,7 @@ Offene Optimierung sektorgekoppelter regionaler Energiesysteme am Beispiel des I
 Installation für Entwickler*innen
 =================================
 
-.. code-block:: bash
+.. code-block::
 
   $ virtualenv venv --clear -p paython3.8
   
@@ -27,7 +27,7 @@ Installation für Entwickler*innen
 
 
 Copyleft
-=========================
+========
 
 Code licensed under "GNU Affero General Public License Version 3 (AGPL-3.0)"
 It is a collaborative work with several copyright owners:
