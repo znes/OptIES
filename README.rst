@@ -9,7 +9,7 @@ Installation für Entwickler*innen
 
 .. code-block::
 
-  $ virtualenv venv --clear -p paython3.8
+  $ virtualenv venv --clear -p python3.8
   
   $ pip install --upgrade pip
   

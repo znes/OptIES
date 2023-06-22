@@ -32,7 +32,7 @@ __copyright__ = (
     "FossilExit Research Group"
 )
 __license__ = "GNU Affero General Public License Version 3 (AGPL-3.0)"
-__author__ = "KathiEsterl"
+__author__ = "KathiEsterl, MatthiasW"
 
 
 
