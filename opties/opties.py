@@ -36,30 +36,22 @@ __author__ = "KathiEsterl"
 
 
 
-# TODO:
-
-# bis Hausanschluss modellieren?    
+# TODO:  
 
 # check crs von buses
 
 # line_types für Leitungsparameter
 # s_nom der Leitungen ableiten
+# network.lines.num_parallel? undergrounding?!
 
 # weitere Parametrisierung:  
-    # Überprüfung der Abbildung der Biogasanlage (siehe Notizen)
-    # Ausbau- und Erzeugungskosten der Generatoren
-    # Ausbaukosten der lines
-    # marginale Kosten Batteriespeicher
-    # Kostenparameter und Verluste der Stores
-    # Kostenparameter, Leistung und Verluste der Links
-    # Flexibilitäten
-    
-# Zeitreihen:
-    # elektrische Lasten der Haushalte: AN2-AN7
-    # elektrische Last des landwirtschaftlichen Betriebs: AN1
-    # aggregierte Wärmelast
+    # siehe TODOS in prepare_data
+
+# Verbesserung der Abbildung der Biogasanlage und KWK-Anlagen (siehe Notizen)
+
+# Flexibilitäten
     # Flexpotential DSM an landwirtschaftlichem Betrieb
-    # Lastzeitreiheund Flexpotential E-Mobilität
+    # Lastzeitreihe und Flexpotential E-Mobilität
 
 # plot network mit osm-background
 
@@ -170,13 +162,11 @@ def optimization(network, args):
     
     print('TODO')
     
-    # TODO: standard line_type-Paramter während lopf angewandt? aßerdem: nun_parallel?
+    # TODO: standard line_type-Paramter während lopf angewandt? außerdem: nun_parallel?
     
     # TODO: manual fixes
-    
     network.generators.p_nom_extendable=False
-    network.generators.p_nom = network.generators.p_nom*100
-    network.lines.s_nom = network.lines.s_nom*100
+    network.loads_t.p_set = network.loads_t.p_set/100
     
     network.lopf(pyomo=args["method"]["pyomo"], solver_name=args["solver_name"], solver_options=args["solver_options"])
     
