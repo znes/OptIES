@@ -17,7 +17,7 @@ Installation für Entwickler*innen
   
   $ pip install pypsa==0.21.3
   
-  $ pip install Pyomo==4.6.1
+  $ pip install Pyomo==6.4.1
   
   $ pip install gurobipy==10.0.1
   
