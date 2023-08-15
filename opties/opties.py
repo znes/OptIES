@@ -78,21 +78,11 @@ def import_data(path='data/'):
 
 def import_timeseries(path='data/timeseries/'):
     
-    # TODO: el_loads und heat_load ersetzen
+    el_loads = pd.read_csv(path+'el_load_synth.csv').set_index('time')
+    el_loads.index = pd.date_range("2019-01-01 00:00","2019-12-31 23:00",freq="H")
     
-    el_load = pd.read_csv(path+'vorl_el_load.csv')
-    el_load = pd.Series(el_load['0'].values, index=pd.date_range("2019-01-01 00:00","2019-12-31 23:00",freq="H"))
-    el_loads = pd.DataFrame(index=el_load.index, columns=['AN1', 'AN2', 'AN3', 'AN4', 'AN5', 'AN6', 'AN7'])
-    el_loads['AN1'] = el_load.values
-    el_loads['AN2'] = el_load.values
-    el_loads['AN3'] = el_load.values
-    el_loads['AN4'] = el_load.values
-    el_loads['AN5'] = el_load.values
-    el_loads['AN6'] = el_load.values
-    el_loads['AN7'] = el_load.values
-    
-    heat_load = pd.read_csv(path+'vorl_heat_load.csv')
-    heat_load = pd.Series(heat_load['0'].values, index=pd.date_range("2019-01-01 00:00","2019-12-31 23:00",freq="H"))
+    heat_load = pd.read_csv(path+'heat_load_synth.csv').set_index('time')
+    heat_load.index = pd.date_range("2019-01-01 00:00","2019-12-31 23:00",freq="H")
     
     pv = pd.read_csv(path+'pv_timeseries.csv')
     pv = pd.Series(pv['p_max_pu'].values, index=pd.date_range("2019-01-01 00:00","2019-12-31 23:00",freq="H"))
@@ -100,7 +90,7 @@ def import_timeseries(path='data/timeseries/'):
     return el_loads, heat_load, pv
 
 
-def create_pypsa_network(buses, lines, generators, storage_units, stores, links, el_loads, heat_load, pv):
+def create_pypsa_network(buses, lines, generators, storage_units, stores, links, loads, el_loads, heat_load, pv):
     
     network = pypsa.Network() 
     
@@ -153,7 +143,7 @@ def create_pypsa_network(buses, lines, generators, storage_units, stores, links,
         if load.carrier == 'AC':
             network.add("Load", name = load.name, carrier=load.carrier, bus=load.bus, p_set=el_loads[load.bus])
         else:
-            network.add("Load", name = load.name, carrier=load.carrier, bus=load.bus, p_set=heat_load)
+            network.add("Load", name = load.name, carrier=load.carrier, bus=load.bus, p_set=heat_load['aggregiert'])
      
     return network
 
@@ -166,7 +156,6 @@ def optimization(network, args):
     
     # TODO: manual fixes
     network.generators.p_nom_extendable=False
-    network.loads_t.p_set = network.loads_t.p_set/100
     
     network.lopf(pyomo=args["method"]["pyomo"], solver_name=args["solver_name"], solver_options=args["solver_options"])
     
@@ -193,9 +182,8 @@ args = {"path": 'data/',
 buses, lines, generators, storage_units, stores, links, loads = import_data(args['path'])
 
 el_loads, heat_load, pv = import_timeseries(args['path']+'/timeseries/')
-# TODO: loads aktualisieren
 
-network = create_pypsa_network(buses, lines, generators, storage_units, stores, links, el_loads, heat_load, pv)
+network = create_pypsa_network(buses, lines, generators, storage_units, stores, links, loads, el_loads, heat_load, pv)
 
 optimization(network, args)
 
