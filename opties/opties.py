@@ -107,7 +107,7 @@ def create_pypsa_network(buses, lines, generators, storage_units, stores, links,
     
     for i in range(0, len(lines)):
         line = lines.iloc[i]
-        network.add("Line", name=line.name, type=line.type, bus0=line.bus0, bus1=line.bus1, s_nom_extendable=line.s_nom_extendable, s_nom_min=line.s_nom_min, s_nom=line.s_nom, length=line.length)
+        network.add("Line", name=line.name, type=line.type, bus0=line.bus0, bus1=line.bus1, s_nom_extendable=line.s_nom_extendable, s_nom_min=line.s_nom_min, s_nom=line.s_nom, length=line.length, capital_cost=line.capital_cost)
     
     # Generation
     
@@ -134,7 +134,7 @@ def create_pypsa_network(buses, lines, generators, storage_units, stores, links,
     
     for i in range(0, len(links)):
         link = links.iloc[i]
-        network.add("Link", name = link.name, bus0=link.bus0, bus1=link.bus1, p_nom_extendable=link.p_nom_extendable, p_nom=link.p_nom, efficiency=link.efficiency, marginal_cost=sto.marginal_cost, capital_cost=sto.capital_cost)
+        network.add("Link", name = link.name, bus0=link.bus0, bus1=link.bus1, p_nom_extendable=link.p_nom_extendable, p_nom=link.p_nom, efficiency=link.efficiency, marginal_cost=link.marginal_cost, capital_cost=link.capital_cost)
     
     # Loads
     
@@ -157,15 +157,21 @@ def optimization(network, args):
     # TODO: manual fixes
     network.generators.p_nom_extendable=False
     
-    network.lopf(pyomo=args["method"]["pyomo"], solver_name=args["solver_name"], solver_options=args["solver_options"])
+    # TODO: adapt selection of snapshots for network
+    start = args["start_snapshot"]-1
+    end = args["end_snapshot"]
+    
+    network.lopf(snapshots=network.snapshots[start:end], pyomo=args["method"]["pyomo"], solver_name=args["solver_name"], solver_options=args["solver_options"], )
     
     network.export_to_csv_folder(args["csv_export"])
 
 args = {"path": 'data/',
+        "start_snapshot": 1,
+        "end_snapshot": 8760,
         "method": {  # Choose method and settings for optimization
             "type": "lopf",  # TODO
             "n_iter": 4,  # TODO
-            "pyomo": True,
+            "pyomo": False,
         },
         "solver_name": "gurobi",
         "solver_options": {
