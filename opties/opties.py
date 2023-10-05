@@ -22,6 +22,7 @@
 This is the application file for the tool OptIES.
 """
 
+import time
 import pandas as pd
 import geopandas as gpd
 import shapely
@@ -32,15 +33,15 @@ __copyright__ = (
     "FossilExit Research Group"
 )
 __license__ = "GNU Affero General Public License Version 3 (AGPL-3.0)"
-__author__ = "KathiEsterl, MatthiasW"
-
+__author__ = "KathiEsterl, MatthiasW, mohsenmansouri"
 
 
 # TODO:  
 
 # check crs von buses
 
-# line_types für Leitungsparameter
+# standard line_type-Paramter während lopf angewandt?
+# line_types spezifizieren für Leitungsparameter
 # s_nom der Leitungen ableiten
 # network.lines.num_parallel? undergrounding?!
 
@@ -150,27 +151,90 @@ def create_pypsa_network(buses, lines, generators, storage_units, stores, links,
 
 def optimization(network, args):
     
-    print('TODO')
+    method = args['method']
+    path = args["csv_export"]
     
-    # TODO: standard line_type-Paramter während lopf angewandt? außerdem: nun_parallel?
+    extra_functionality = None
     
-    # TODO: manual fixes
-    network.generators.p_nom_extendable=False
+    if network.lines.s_nom_extendable.any():
+        
+        # s_nom_pre = s_nom_opt of previous iteration
+        l_snom_pre = network.lines.s_nom.copy()
+
+        # calculate fixed number of iterations
+        if "n_iter" in method:
+            n_iter = method["n_iter"]
+
+            for i in range(1, (1 + n_iter)):
+                run_lopf(network, args, extra_functionality)
+
+                path_it = path + "/lopf_iteration_" + str(i)
+                network.export_to_csv_folder(path_it)
+
+                # adapt s_nom per iteration
+                if i < n_iter:
+                    network.lines.x[network.lines.s_nom_extendable] = (
+                        network.lines.x * l_snom_pre / network.lines.s_nom_opt
+                    )
+
+                    network.lines.r[network.lines.s_nom_extendable] = (
+                        network.lines.r * l_snom_pre / network.lines.s_nom_opt
+                    )
+
+                    network.lines.g[network.lines.s_nom_extendable] = (
+                        network.lines.g * network.lines.s_nom_opt / l_snom_pre
+                    )
+
+                    network.lines.b[network.lines.s_nom_extendable] = (
+                        network.lines.b * network.lines.s_nom_opt / l_snom_pre
+                    )
+
+                    # Set snom_pre to s_nom_opt for next iteration
+                    l_snom_pre = network.lines.s_nom_opt.copy()
+                    t_snom_pre = network.transformers.s_nom_opt.copy()
+
+        # TODO:  Version mit Threshold ?
+
+    else:
+        run_lopf(network, args, extra_functionality)
+
     
-    # TODO: adapt selection of snapshots for network
+def run_lopf(network, args, extra_functionality):
+    
+    x = time.time()
+    
+    # snapshots
     start = args["start_snapshot"]-1
     end = args["end_snapshot"]
     
-    network.lopf(snapshots=network.snapshots[start:end], pyomo=args["method"]["pyomo"], solver_name=args["solver_name"], solver_options=args["solver_options"], )
+    network.lopf(
+            snapshots=network.snapshots[start:end],
+            pyomo=args["method"]["pyomo"],
+            solver_name=args["solver_name"],
+            solver_options=args["solver_options"],
+            extra_functionality=extra_functionality
+        )
+
+    # TODO: Exception ?
+    # TODO: pyomo vs. ohne pyomo unterscheiden ?
+                
+    y = time.time()
+    z = (y - x) / 60
+
+    print("Time for LOPF [min]:", round(z, 2))
     
     network.export_to_csv_folder(args["csv_export"])
+
+
+##############################################################################################################################
+    
 
 args = {"path": 'data/',
         "start_snapshot": 1,
         "end_snapshot": 8760,
         "method": {  # Choose method and settings for optimization
-            "type": "lopf",  # TODO
-            "n_iter": 4,  # TODO
+            "type": "lopf",  # TODO ? 
+            "n_iter": 2,  
             "pyomo": False,
         },
         "solver_name": "gurobi",
@@ -185,15 +249,19 @@ args = {"path": 'data/',
         },
         "csv_export": 'opties_results'}
 
+
 buses, lines, generators, storage_units, stores, links, loads = import_data(args['path'])
 
 el_loads, heat_load, pv = import_timeseries(args['path']+'/timeseries/')
 
 network = create_pypsa_network(buses, lines, generators, storage_units, stores, links, loads, el_loads, heat_load, pv)
 
+# TODO: manual fixes
+network.generators.p_nom_extendable=False
+
 optimization(network, args)
 
-#network.plot(bus_sizes=0.00000001, line_widths=1, link_widths=1)
+# network.plot(bus_sizes=0.00000001, line_widths=1, link_widths=1)
 
 
 
