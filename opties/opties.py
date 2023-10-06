@@ -27,6 +27,7 @@ import pandas as pd
 import geopandas as gpd
 import shapely
 import pypsa
+from optimization import Constraints
 
 __copyright__ = (
     "Europa-Universität Flensburg, Centre for Sustainable Energy Systems, "
@@ -135,7 +136,7 @@ def create_pypsa_network(buses, lines, generators, storage_units, stores, links,
     
     for i in range(0, len(links)):
         link = links.iloc[i]
-        network.add("Link", name = link.name, bus0=link.bus0, bus1=link.bus1, p_nom_extendable=link.p_nom_extendable, p_nom=link.p_nom, efficiency=link.efficiency, marginal_cost=link.marginal_cost, capital_cost=link.capital_cost)
+        network.add("Link", name = link.name, carrier=link.carrier, bus0=link.bus0, bus1=link.bus1, p_nom_extendable=link.p_nom_extendable, p_nom=link.p_nom, efficiency=link.efficiency, marginal_cost=link.marginal_cost, capital_cost=link.capital_cost)
     
     # Loads
     
@@ -144,7 +145,7 @@ def create_pypsa_network(buses, lines, generators, storage_units, stores, links,
         if load.carrier == 'AC':
             network.add("Load", name = load.name, carrier=load.carrier, bus=load.bus, p_set=el_loads[load.bus])
         else:
-            network.add("Load", name = load.name, carrier=load.carrier, bus=load.bus, p_set=heat_load['aggregiert'])
+            network.add("Load", name = load.name, carrier=load.carrier, bus=load.bus, p_set=heat_load['aggregierte Erzeugung'])
      
     return network
 
@@ -154,7 +155,10 @@ def optimization(network, args):
     method = args['method']
     path = args["csv_export"]
     
-    extra_functionality = None
+    # snapshots
+    start = args["start_snapshot"]-1
+    end = args["end_snapshot"]
+    snapshots = network.snapshots[start:end]
     
     if network.lines.s_nom_extendable.any():
         
@@ -166,7 +170,7 @@ def optimization(network, args):
             n_iter = method["n_iter"]
 
             for i in range(1, (1 + n_iter)):
-                run_lopf(network, args, extra_functionality)
+                run_lopf(network, args, Constraints().extra_functionalities)
 
                 path_it = path + "/lopf_iteration_" + str(i)
                 network.export_to_csv_folder(path_it)
@@ -196,7 +200,7 @@ def optimization(network, args):
         # TODO:  Version mit Threshold ?
 
     else:
-        run_lopf(network, args, extra_functionality)
+        run_lopf(network, args, Constraints().extra_functionalities)
 
     
 def run_lopf(network, args, extra_functionality):
@@ -206,6 +210,8 @@ def run_lopf(network, args, extra_functionality):
     # snapshots
     start = args["start_snapshot"]-1
     end = args["end_snapshot"]
+    
+    #network.optimize.create_model()
     
     network.lopf(
             snapshots=network.snapshots[start:end],
