@@ -64,9 +64,15 @@ network.generators_t.p[AC_gen].iloc[0:336].plot()
 
 # plot CHPs
 
+abs(network.links_t.p1[network.links[network.links.index.str.startswith('KWK1')].index]).plot()
+
+# plot AC links
+
 AC_links = network.links[network.links.bus1.isin(network.buses[network.buses.carrier=='AC'].index)].index
 
 network.links_t.p0[AC_links].plot()
+
+
 
 # plot battery storage
 
