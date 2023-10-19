@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2023 
+# Copyright 2023
 # Europa-Universität Flensburg,
 # Centre for Sustainable Energy Systems,
 # FossilExit Research Group
@@ -36,56 +36,66 @@ __license__ = "GNU Affero General Public License Version 3 (AGPL-3.0)"
 __author__ = "KathiEsterl, MatthiasW, mohsenmansouri"
 
 
-# TODO:  
+# TODO:
 
-# weitere Parametrisierung:  
-    # siehe TODOS in prepare_data
-    
+# weitere Parametrisierung:
+# siehe TODOS in prepare_data
+
 # network.lines.num_parallel? undergrounding?!
 
 # Verbesserung der Abbildung der Biogasanlage (siehe Notizen)
 
 # Flexibilitäten
-    # Flexpotential DSM an landwirtschaftlichem Betrieb
-    # Lastzeitreihe und Flexpotential E-Mobilität
-    
+# Flexpotential DSM an landwirtschaftlichem Betrieb
+# Lastzeitreihe und Flexpotential E-Mobilität
+
 # siehe ToDos in optimization und plots
 
 
-args = {"path": 'data/',
-        "start_snapshot": 1,
-        "end_snapshot": 8760,
-        "method": {  # Choose method and settings for optimization
-            "type": "lopf",  # TODO ? 
-            "n_iter": 2,  
-            "pyomo": False,
-        },
-        "solver_name": "gurobi",
-        "solver_options": {
-            "BarConvTol": 1e-05,
-            "FeasibilityTol": 1e-05,
-            "crossover": 0,
-            "logFile": "solver_opties.log",
-            "threads": 4,
-            "method": 2,
-            "BarHomogeneous": 1
-        },
-        "csv_export": 'opties_results'}
+args = {
+    "path": "data/alt/",
+    "start_snapshot": 1,
+    "end_snapshot": 8760,
+    "method": {  # Choose method and settings for optimization
+        "type": "lopf",  # TODO ?
+        "n_iter": 2,
+        "pyomo": False,
+    },
+    "solver_name": "gurobi",
+    "solver_options": {
+        "BarConvTol": 1e-05,
+        "FeasibilityTol": 1e-05,
+        "crossover": 0,
+        "logFile": "solver_opties.log",
+        "threads": 4,
+        "method": 2,
+        "BarHomogeneous": 1,
+    },
+    "csv_export": "opties_results",
+}
 
-buses, lines, generators, storage_units, stores, links, loads = import_data(args['path'])
+buses, lines, generators, storage_units, stores, links, loads = import_data(
+    args["path"]
+)
 
-el_loads, heat_load, pv = import_timeseries(args['path']+'/timeseries/')
+el_loads, heat_load, pv = import_timeseries(args["path"] + "/timeseries/")
 
-network = create_pypsa_network(buses, lines, generators, storage_units, stores, links, loads, el_loads, heat_load, pv)
+network = create_pypsa_network(
+    buses,
+    lines,
+    generators,
+    storage_units,
+    stores,
+    links,
+    loads,
+    el_loads,
+    heat_load,
+    pv,
+)
 
 # TODO: manual fixes
-network.generators.p_nom_extendable=False
+network.generators.p_nom_extendable = False
 
 optimization(network, args)
 
 results = calc_results(network)
-
-
-
-
-
