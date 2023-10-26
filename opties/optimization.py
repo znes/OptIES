@@ -23,7 +23,9 @@ This file contains the functions related to the optimization.
 """
 
 import time
+import math
 from pypsa.linopt import get_var, linexpr, define_constraints
+from pyomo.environ import Constraint
 
 __copyright__ = (
     "Europa-Universität Flensburg, Centre for Sustainable Energy Systems, "
@@ -47,41 +49,35 @@ def optimization(network, args):
         l_snom_pre = network.lines.s_nom.copy()
 
         # calculate fixed number of iterations
-        if "n_iter" in method:
-            n_iter = method["n_iter"]
+        n_iter = method["n_iter"]
 
-            for i in range(1, (1 + n_iter)):
-                run_lopf(network, args, Constraints().extra_functionalities)
+        for i in range(1, (1 + n_iter)):
+            run_lopf(network, args, Constraints(args).extra_functionalities)
 
-                path_it = path + "/lopf_iteration_" + str(i)
-                network.export_to_csv_folder(path_it)
+            path_it = path + "/lopf_iteration_" + str(i)
+            network.export_to_csv_folder(path_it)
 
-                # adapt s_nom per iteration
-                if i < n_iter:
-                    network.lines.x[network.lines.s_nom_extendable] = (
-                        network.lines.x * l_snom_pre / network.lines.s_nom_opt
-                    )
+            # adapt s_nom per iteration
+            if i < n_iter:
+                network.lines.loc[network.lines.s_nom_extendable].x = (
+                    network.lines.x * l_snom_pre / network.lines.s_nom_opt
+                )
 
-                    network.lines.r[network.lines.s_nom_extendable] = (
-                        network.lines.r * l_snom_pre / network.lines.s_nom_opt
-                    )
+                network.lines.loc[network.lines.s_nom_extendable].r = (
+                    network.lines.r * l_snom_pre / network.lines.s_nom_opt
+                )
 
-                    network.lines.g[network.lines.s_nom_extendable] = (
-                        network.lines.g * network.lines.s_nom_opt / l_snom_pre
-                    )
+                network.lines.loc[network.lines.s_nom_extendable].g = (
+                    network.lines.g * network.lines.s_nom_opt / l_snom_pre
+                )
 
-                    network.lines.b[network.lines.s_nom_extendable] = (
-                        network.lines.b * network.lines.s_nom_opt / l_snom_pre
-                    )
+                network.lines.loc[network.lines.s_nom_extendable].b = (
+                    network.lines.b * network.lines.s_nom_opt / l_snom_pre
+                )
 
-                    # Set snom_pre to s_nom_opt for next iteration
-                    l_snom_pre = network.lines.s_nom_opt.copy()
-                    t_snom_pre = network.transformers.s_nom_opt.copy()
-
-        # TODO:  Version mit Threshold ?
-
-    else:
-        run_lopf(network, args, Constraints().extra_functionalities)
+                # Set snom_pre to s_nom_opt for next iteration
+                l_snom_pre = network.lines.s_nom_opt.copy()
+                t_snom_pre = network.transformers.s_nom_opt.copy()
 
 
 def run_lopf(network, args, extra_functionality):
@@ -101,8 +97,8 @@ def run_lopf(network, args, extra_functionality):
         extra_functionality=extra_functionality,
     )
 
-    # TODO: Exception ?
-    # TODO: pyomo vs. ohne pyomo unterscheiden ?
+    if math.isnan(network.objective):
+        raise Exception("LOPF nicht gelöst.")
 
     y = time.time()
     z = (y - x) / 60
@@ -112,10 +108,11 @@ def run_lopf(network, args, extra_functionality):
     network.export_to_csv_folder(args["csv_export"])
 
 
-def add_chp_constraints_nmp(n, sns):
+def kwk_constraints_nmp(n, sns):
     # Konstanten
     c_m = 0.75  # backpressure limit
-    c_v = 0.15  # marginal loss for each additional generation of heat
+    c_v = 0.2  # marginal loss for each additional generation of heat
+    nom_r = 1  # ratio between max heat output and max electric output
 
     # KWK: elektrische und Wärme-Links
     electric_bool = n.links.carrier == "KWK_AC"
@@ -128,12 +125,27 @@ def add_chp_constraints_nmp(n, sns):
         n.links.loc[electric_links, "efficiency"] / c_v
     ).values.mean()
 
-    # KWK-Gasknoten
-    ch4_nodes_with_chp = n.buses.loc[
-        n.links[n.links.index.str.startswith("KWK")].bus0
-    ].index.unique()
+    # Zusammengehörigkeit der elektrischen und Wärme-Links
+    el_ht = {"KWK1_AC": "KWK1_W", "KWK2_AC": "KWK2_W", "KWK3_AC": "KWK3_W"}
 
-    for i in ch4_nodes_with_chp:
+    # bei Ausbau der BHKWs
+
+    if n.links.loc[electric_links, "p_nom_extendable"].any():
+        link_pnom = get_var(n, "Link", "p_nom")
+
+        for elec in electric_links:
+            heat = el_ht[elec]
+
+            lhs1 = n.links.loc[elec, "efficiency"] * nom_r * link_pnom[elec]
+            lhs2 = n.links.loc[heat, "efficiency"] * link_pnom[heat]
+
+            lhs = linexpr((1, lhs1), (-1, lhs2))
+            define_constraints(n, lhs, "==", 0, "heat-power output proportionality")
+
+    # KWK-Gasknoten
+    bga = n.buses.loc[n.links[n.links.index.str.startswith("KWK")].bus0].index.unique()
+
+    for i in bga:
         # Links an ausgewähltem Knoten
         elec = n.links[(n.links.carrier == "KWK_AC") & (n.links.bus0 == i)].index
         heat = n.links[(n.links.carrier == "KWK_heat") & (n.links.bus0 == i)].index
@@ -143,13 +155,14 @@ def add_chp_constraints_nmp(n, sns):
 
         # Verhältnis aus Strom- und Wärmeoutput
 
-        lhs_1 = sum(
-            c_m * n.links.at[h_chp, "efficiency"] * link_p[h_chp] for h_chp in heat
-        )
-        lhs_2 = sum(n.links.at[e_chp, "efficiency"] * link_p[e_chp] for e_chp in elec)
+        for el in elec:
+            ht = el_ht[el]
 
-        lhs = linexpr((1, lhs_1), (-1, lhs_2))
-        define_constraints(n, lhs, "<=", 0, "chplink_" + str(i), "backpressure")
+            lhs_1 = c_m * n.links.at[ht, "efficiency"] * link_p[ht]
+            lhs_2 = n.links.at[el, "efficiency"] * link_p[el]
+
+            lhs = linexpr((1, lhs_1), (-1, lhs_2))
+            define_constraints(n, lhs, "<=", 0, "chplink_" + str(el), "backpressure")
 
         # Constraints zur Begrenzung des Biogaseinsatzes für Strom- und Wärmeoutput
         # top_iso_fuel_line
@@ -171,19 +184,135 @@ def add_chp_constraints_nmp(n, sns):
         )
 
 
-# TODO: pyomo-constraints
+def kwk_constraints_pyomo(n, sns):
+    # Konstanten
+    c_m = 0.75  # backpressure limit
+    c_v = 0.2  # marginal loss for each additional generation of heat
+    nom_r = 1  # ratio between max heat output and max electric output
+
+    # KWK: elektrische und Wärme-Links
+    electric_bool = n.links.carrier == "KWK_AC"
+    heat_bool = n.links.carrier == "KWK_heat"
+    electric_links = n.links.index[electric_bool]
+    heat_links = n.links.index[heat_bool]
+
+    # Effizienzen Wärme-Links
+    n.links.loc[heat_links, "efficiency"] = (
+        n.links.loc[electric_links, "efficiency"] / c_v
+    ).values.mean()
+
+    # Zusammengehörigkeit der elektrischen und Wärme-Links
+    el_ht = {"KWK1_AC": "KWK1_W", "KWK2_AC": "KWK2_W", "KWK3_AC": "KWK3_W"}
+
+    # bei Ausbau der BHKWs
+
+    if n.links.loc[electric_links, "p_nom_extendable"].any():
+        for elec in electric_links:
+            heat = el_ht[elec]
+
+            def heat_power_output(model):
+                lhs = n.links.at[elec, "efficiency"] * nom_r * model.link_p_nom[elec]
+                rhs = n.links.at[heat, "efficiency"] * model.link_p_nom[heat]
+
+                return lhs - rhs == 0
+
+            setattr(
+                n.model,
+                "heat-power output proportionality" + str(elec),
+                Constraint(rule=heat_power_output),
+            )
+
+    # KWK-Gasknoten
+    bga = n.buses.loc[n.links[n.links.index.str.startswith("KWK")].bus0].index.unique()
+
+    for i in bga:
+        # Links an ausgewähltem Knoten
+        elec = n.links[(n.links.carrier == "KWK_AC") & (n.links.bus0 == i)].index
+        heat = n.links[(n.links.carrier == "KWK_heat") & (n.links.bus0 == i)].index
+
+        # Verhältnis aus Strom- und Wärmeoutput
+        # Backpressure Limit
+
+        for el in elec:
+            ht = el_ht[el]
+
+            def backpressure(model, snapshot):
+                lhs = c_m * n.links.at[ht, "efficiency"] * model.link_p[ht, snapshot]
+
+                rhs = n.links.at[el, "efficiency"] * model.link_p[el, snapshot]
+
+                return lhs <= rhs
+
+            setattr(
+                n.model,
+                "backpressure_" + str(i) + str(el),
+                Constraint(list(sns), rule=backpressure),
+            )
+
+        # Constraints zur Begrenzung des Biogaseinsatzes für Strom- und Wärmeoutput
+        # top_iso_fuel_line
+
+        def top_iso_fuel_line(model, snapshot):
+            lhs = sum(model.link_p[h_chp, snapshot] for h_chp in heat) + sum(
+                model.link_p[e_chp, snapshot] for e_chp in elec
+            )
+
+            rhs = n.links[
+                (n.links.carrier == "KWK_heat") & (n.links.bus0 == i)
+            ].p_nom.sum()
+
+            return lhs <= rhs
+
+        setattr(
+            n.model,
+            "top_iso_fuel_line_" + str(i),
+            Constraint(list(sns), rule=top_iso_fuel_line),
+        )
+
+
+def trocknungsanlage_nmp(n, sns):
+    store_e = get_var(n, "Store", "e").loc[sns[-1]]
+
+    lhs = linexpr(
+        (1, store_e["TA"]),
+        return_axes=True,
+    )
+
+    define_constraints(
+        n,
+        lhs,
+        "==",
+        2976,
+        "Store_TA",
+        "load_trocknungsanlage",
+    )
+
+
+def trocknungsanlage_pyomo(n, sns):
+    def load_trocknungsanlage(model, snapshot):
+        lhs = n.model.store_e["TA", snapshot]
+        rhs = 2976
+
+        return lhs == rhs
+
+    setattr(
+        n.model,
+        "load_trocknungsanlage",
+        Constraint(sns[-1:], rule=load_trocknungsanlage),
+    )
 
 
 class Constraints:
+    def __init__(self, args):
+        self.args = args
+
     def extra_functionalities(self, network, snapshots):
-        """Add constraints to pypsa-model using extra-functionality.
+        args = self.args
 
-        Parameters
-        ----------
-        network : :class:`pypsa.Network`
-            Overall container of PyPSA
-        snapshots : pandas.DatetimeIndex
-            List of timesteps considered in the optimization
+        if args["method"]["pyomo"]:
+            kwk_constraints_pyomo(network, snapshots)
+            trocknungsanlage_pyomo(network, snapshots)
 
-        """
-        add_chp_constraints_nmp(network, snapshots)
+        else:
+            kwk_constraints_nmp(network, snapshots)
+            trocknungsanlage_nmp(network, snapshots)
