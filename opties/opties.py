@@ -36,30 +36,14 @@ __license__ = "GNU Affero General Public License Version 3 (AGPL-3.0)"
 __author__ = "KathiEsterl, MatthiasW, mohsenmansouri"
 
 
-# TODO:
-
-# weitere Parametrisierung:
-# siehe TODOS in prepare_data
-
-# network.lines.num_parallel? undergrounding?!
-
-# Verbesserung der Abbildung der Biogasanlage (siehe Notizen)
-
-# Flexibilitäten
-# Flexpotential DSM an landwirtschaftlichem Betrieb
-# Lastzeitreihe und Flexpotential E-Mobilität
-
-# siehe ToDos in optimization und plots
-
-
 args = {
-    "path": "data/alt/",
+    "path": "data/",
     "start_snapshot": 1,
     "end_snapshot": 8760,
-    "method": {  # Choose method and settings for optimization
-        "type": "lopf",  # TODO ?
+    "method": {
+        "type": "lopf",
         "n_iter": 2,
-        "pyomo": False,
+        "pyomo": True,
     },
     "solver_name": "gurobi",
     "solver_options": {
@@ -73,6 +57,7 @@ args = {
     },
     "csv_export": "opties_results",
 }
+
 
 buses, lines, generators, storage_units, stores, links, loads = import_data(
     args["path"]
@@ -93,7 +78,6 @@ network = create_pypsa_network(
     pv,
 )
 
-# TODO: manual fixes
 network.generators.p_nom_extendable = False
 
 optimization(network, args)

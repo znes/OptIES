@@ -23,6 +23,11 @@ This file contains the functions to import the corresponding data and build
 a PyPSA network container.
 """
 
+import pandas as pd
+import geopandas as gpd
+import shapely
+import pypsa
+
 from pypsa.linopt import get_var, linexpr, define_constraints
 
 __copyright__ = (
@@ -31,11 +36,6 @@ __copyright__ = (
 )
 __license__ = "GNU Affero General Public License Version 3 (AGPL-3.0)"
 __author__ = "KathiEsterl"
-
-import pandas as pd
-import geopandas as gpd
-import shapely
-import pypsa
 
 
 def import_data(path="data/"):
@@ -52,7 +52,7 @@ def import_data(path="data/"):
     links = pd.read_csv(path + "links.csv").set_index("name")
     loads = pd.read_csv(path + "loads.csv").set_index("name")
 
-    loads = loads.drop(["LS1", "LS2"])  # TODO: noch ohne E-Mob
+    loads = loads.drop(["LS1", "LS2"])
 
     return buses, lines, generators, storage_units, stores, links, loads
 
@@ -225,7 +225,7 @@ def create_pypsa_network(
                 name=load.name,
                 carrier=load.carrier,
                 bus=load.bus,
-                p_set=heat_load["aggregierte Erzeugung"],
+                p_set=heat_load[load.name],
             )
 
     return network
