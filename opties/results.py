@@ -233,9 +233,9 @@ def calc_results(network):
         .sum()
         * (network.generators.loc["BGA1"].marginal_cost)
         + network.generators_t.p["BGA2"]
-            .mul(network.snapshot_weightings.objective, axis=0)
-            .sum()
-            * (network.generators.loc["BGA2"].marginal_cost)
+        .mul(network.snapshot_weightings.objective, axis=0)
+        .sum()
+        * (network.generators.loc["BGA2"].marginal_cost)
         + (
             network.links_t.p0[network.links[network.links.carrier == "KWK_AC"].index]
             .mul(network.snapshot_weightings.objective, axis=0)
@@ -246,12 +246,16 @@ def calc_results(network):
 
     # Systemausbau
 
-    results.value["abs. Netzausbau"] = calc_network_expansion(network)[0].sum() - calc_network_expansion(network)[0][10]
+    results.value["abs. Netzausbau"] = (
+        calc_network_expansion(network)[0].sum()
+        - calc_network_expansion(network)[0][10]
+    )
 
     ext_lines = network.lines[network.lines.s_nom_extendable]
     results.value["rel. Netzausbau"] = (
-        (calc_network_expansion(network)[0].sum() - calc_network_expansion(network)[0][10]) / ext_lines.s_nom.sum()
-    )
+        calc_network_expansion(network)[0].sum()
+        - calc_network_expansion(network)[0][10]
+    ) / ext_lines.s_nom.sum()
 
     results.value["Ausbau Batteriespeicher"] = (
         (network.storage_units.p_nom_opt - network.storage_units.p_nom_min)[
@@ -316,6 +320,8 @@ def calc_results(network):
 
     results.value["Netzeinspeisung"] = network.links_t.p0["NA_Sp"].sum()
 
-    results.value["Biogaserzeugung"] = network.generators_t.p["BGA1"].sum() + network.generators_t.p["BGA2"].sum()
+    results.value["Biogaserzeugung"] = (
+        network.generators_t.p["BGA1"].sum() + network.generators_t.p["BGA2"].sum()
+    )
 
     return results
