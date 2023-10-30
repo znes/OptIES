@@ -64,13 +64,16 @@ def import_timeseries(path="data/timeseries/"):
     heat_load = pd.read_csv(path + "heat_load_synth.csv").set_index("time")
     heat_load.index = pd.date_range("2019-01-01 00:00", "2019-12-31 23:00", freq="H")
 
+    gas_load = pd.read_csv(path + "gas_load.csv").set_index("time")
+    gas_load.index = pd.date_range("2019-01-01 00:00", "2019-12-31 23:00", freq="H")
+
     pv = pd.read_csv(path + "pv_timeseries.csv")
     pv = pd.Series(
         pv["p_max_pu"].values,
         index=pd.date_range("2019-01-01 00:00", "2019-12-31 23:00", freq="H"),
     )
 
-    return el_loads, heat_load, pv
+    return el_loads, heat_load, gas_load, pv
 
 
 def create_pypsa_network(
@@ -83,6 +86,7 @@ def create_pypsa_network(
     loads,
     el_loads,
     heat_load,
+    gas_load,
     pv,
 ):
     network = pypsa.Network()
@@ -133,6 +137,8 @@ def create_pypsa_network(
                 bus=gen.bus,
                 control=gen.control,
                 p_nom=gen.p_nom,
+                p_nom_min=gen.p_nom_min,
+                p_nom_max=gen.p_nom_max,
                 p_nom_extendable=gen.p_nom_extendable,
                 marginal_cost=gen.marginal_cost,
                 capital_cost=gen.capital_cost,
@@ -146,6 +152,8 @@ def create_pypsa_network(
                 bus=gen.bus,
                 control=gen.control,
                 p_nom=gen.p_nom,
+                p_nom_min=gen.p_nom_min,
+                p_nom_max=gen.p_nom_max,
                 p_nom_extendable=gen.p_nom_extendable,
                 marginal_cost=gen.marginal_cost,
                 capital_cost=gen.capital_cost,
@@ -219,13 +227,21 @@ def create_pypsa_network(
                 bus=load.bus,
                 p_set=el_loads[load.bus],
             )
-        else:
+        elif load.carrier == "heat":
             network.add(
                 "Load",
                 name=load.name,
                 carrier=load.carrier,
                 bus=load.bus,
                 p_set=heat_load[load.name],
+            )
+        else:
+            network.add(
+                "Load",
+                name=load.name,
+                carrier=load.carrier,
+                bus=load.bus,
+                p_set=gas_load[load.name],
             )
 
     return network
