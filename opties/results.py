@@ -165,7 +165,8 @@ def calc_results(network):
             "Erzeugung durch BHKW - Strom",
             "Netzbezug",
             "Netzeinspeisung",
-            "gesamte Wärmelast",
+            "Wärmelast (Wärmenetz)",
+            "Eigenverbrauch",
             "Last der Trocknungsanlage",
             "restliche Abwärme",
             "Erzeugung durch BHKW - Wärme",
@@ -182,6 +183,7 @@ def calc_results(network):
     results.unit[results.index.str.contains("ausbau")] = "MW"
     results.unit[results.index.str.contains("Last")] = "MWh"
     results.unit[results.index.str.contains("last")] = "MWh"
+    results.unit[results.index.str.contains("verbrauch")] = "MWh"
     results.unit[results.index.str.contains("restlich")] = "MWh"
     results.unit[results.index.str.contains("Erzeugung")] = "MWh"
     results.unit[results.index.str.contains("erzeugung")] = "MWh"
@@ -282,11 +284,9 @@ def calc_results(network):
         .sum()
     )
 
-    results.value["gesamte Wärmelast"] = (
-        network.loads_t.p[network.loads[network.loads.carrier == "heat"].index]
-        .sum()
-        .sum()
-    )
+    results.value["Wärmelast (Wärmenetz)"] = network.loads_t.p["WL"].sum().sum()
+
+    results.value["Eigenverbrauch"] = network.loads_t.p["EV"].sum()
 
     results.value["Erzeugung aus PV-Anlagen"] = (
         network.generators_t.p[
