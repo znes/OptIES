@@ -120,13 +120,13 @@ def kwk_constraints_nmp(n, sns):
     electric_links = n.links.index[electric_bool]
     heat_links = n.links.index[heat_bool]
 
+    # Zusammengehörigkeit der elektrischen und Wärme-Links
+    el_ht = {"KWK1_AC": "KWK1_W", "KWK2_AC": "KWK2_W", "KWK3_AC": "KWK3_W"}
+
     # Effizienzen Wärme-Links
     n.links.loc[heat_links, "efficiency"] = (
         n.links.loc[electric_links, "efficiency"] / c_v
     ).values.mean()
-
-    # Zusammengehörigkeit der elektrischen und Wärme-Links
-    el_ht = {"KWK1_AC": "KWK1_W", "KWK2_AC": "KWK2_W", "KWK3_AC": "KWK3_W"}
 
     # bei Ausbau der BHKWs
 
@@ -142,34 +142,26 @@ def kwk_constraints_nmp(n, sns):
             lhs = linexpr((1, lhs1), (-1, lhs2))
             define_constraints(n, lhs, "==", 0, "heat-power output proportionality")
 
-    # KWK-Gasknoten
-    bga = n.buses.loc[n.links[n.links.index.str.startswith("KWK")].bus0].index.unique()
+    # Leistung an Links (Optimierungsvariable)
+    link_p = get_var(n, "Link", "p")
 
-    for i in bga:
-        # Links an ausgewähltem Knoten
-        elec = n.links[(n.links.carrier == "KWK_AC") & (n.links.bus0 == i)].index
-        heat = n.links[(n.links.carrier == "KWK_heat") & (n.links.bus0 == i)].index
-
-        # Leistung an Links (Optimierungsvariable)
-        link_p = get_var(n, "Link", "p")
+    for el in electric_links:
+        ht = el_ht[el]
 
         # Verhältnis aus Strom- und Wärmeoutput
 
-        for el in elec:
-            ht = el_ht[el]
+        lhs_1 = c_m * n.links.at[ht, "efficiency"] * link_p[ht]
+        lhs_2 = n.links.at[el, "efficiency"] * link_p[el]
 
-            lhs_1 = c_m * n.links.at[ht, "efficiency"] * link_p[ht]
-            lhs_2 = n.links.at[el, "efficiency"] * link_p[el]
-
-            lhs = linexpr((1, lhs_1), (-1, lhs_2))
-            define_constraints(n, lhs, "<=", 0, "chplink_" + str(el), "backpressure")
+        lhs = linexpr((1, lhs_1), (-1, lhs_2))
+        define_constraints(n, lhs, "<=", 0, "chplink_" + str(el), "backpressure")
 
         # Constraints zur Begrenzung des Biogaseinsatzes für Strom- und Wärmeoutput
         # top_iso_fuel_line
 
         lhs, *ax = linexpr(
-            (1, sum(link_p[h_chp] for h_chp in heat)),
-            (1, sum(link_p[h_e] for h_e in elec)),
+            (1, link_p[ht]),
+            (1, link_p[el]),
             return_axes=True,
         )
 
@@ -177,8 +169,8 @@ def kwk_constraints_nmp(n, sns):
             n,
             lhs,
             "<=",
-            n.links.loc[elec].p_nom.sum(),
-            "chplink_" + str(i),
+            n.links.loc[el].p_nom.sum(),
+            "chplink_" + str(el),
             "top_iso_fuel_line_fix",
             axes=ax,
         )
@@ -196,16 +188,15 @@ def kwk_constraints_pyomo(n, sns):
     electric_links = n.links.index[electric_bool]
     heat_links = n.links.index[heat_bool]
 
+    # Zusammengehörigkeit der elektrischen und Wärme-Links
+    el_ht = {"KWK1_AC": "KWK1_W", "KWK2_AC": "KWK2_W", "KWK3_AC": "KWK3_W"}
+
     # Effizienzen Wärme-Links
     n.links.loc[heat_links, "efficiency"] = (
         n.links.loc[electric_links, "efficiency"] / c_v
     ).values.mean()
 
-    # Zusammengehörigkeit der elektrischen und Wärme-Links
-    el_ht = {"KWK1_AC": "KWK1_W", "KWK2_AC": "KWK2_W", "KWK3_AC": "KWK3_W"}
-
     # bei Ausbau der BHKWs
-
     if n.links.loc[electric_links, "p_nom_extendable"].any():
         for elec in electric_links:
             heat = el_ht[elec]
@@ -222,50 +213,37 @@ def kwk_constraints_pyomo(n, sns):
                 Constraint(rule=heat_power_output),
             )
 
-    # KWK-Gasknoten
-    bga = n.buses.loc[n.links[n.links.index.str.startswith("KWK")].bus0].index.unique()
-
-    for i in bga:
-        # Links an ausgewähltem Knoten
-        elec = n.links[(n.links.carrier == "KWK_AC") & (n.links.bus0 == i)].index
-        heat = n.links[(n.links.carrier == "KWK_heat") & (n.links.bus0 == i)].index
+    for el in electric_links:
+        ht = el_ht[el]
 
         # Verhältnis aus Strom- und Wärmeoutput
-        # Backpressure Limit
 
-        for el in elec:
-            ht = el_ht[el]
+        def backpressure(model, snapshot):
+            lhs = c_m * n.links.at[ht, "efficiency"] * model.link_p[ht, snapshot]
 
-            def backpressure(model, snapshot):
-                lhs = c_m * n.links.at[ht, "efficiency"] * model.link_p[ht, snapshot]
-
-                rhs = n.links.at[el, "efficiency"] * model.link_p[el, snapshot]
-
-                return lhs <= rhs
-
-            setattr(
-                n.model,
-                "backpressure_" + str(i) + str(el),
-                Constraint(list(sns), rule=backpressure),
-            )
-
-        # Constraints zur Begrenzung des Biogaseinsatzes für Strom- und Wärmeoutput
-        # top_iso_fuel_line
-
-        def top_iso_fuel_line(model, snapshot):
-            lhs = sum(model.link_p[h_chp, snapshot] for h_chp in heat) + sum(
-                model.link_p[e_chp, snapshot] for e_chp in elec
-            )
-
-            rhs = n.links[
-                (n.links.carrier == "KWK_heat") & (n.links.bus0 == i)
-            ].p_nom.sum()
+            rhs = n.links.at[el, "efficiency"] * model.link_p[el, snapshot]
 
             return lhs <= rhs
 
         setattr(
             n.model,
-            "top_iso_fuel_line_" + str(i),
+            "backpressure_" + str(el),
+            Constraint(list(sns), rule=backpressure),
+        )
+
+        # Constraints zur Begrenzung des Biogaseinsatzes für Strom- und Wärmeoutput
+        # top_iso_fuel_line
+
+        def top_iso_fuel_line(model, snapshot):
+            lhs = (model.link_p[ht, snapshot]) + (model.link_p[el, snapshot])
+
+            rhs = n.links.loc[el].p_nom.sum()
+
+            return lhs <= rhs
+
+        setattr(
+            n.model,
+            "top_iso_fuel_line_" + str(el),
             Constraint(list(sns), rule=top_iso_fuel_line),
         )
 
