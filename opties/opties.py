@@ -63,7 +63,7 @@ buses, lines, generators, storage_units, stores, links, loads = import_data(
     args["path"]
 )
 
-el_loads, heat_load, pv = import_timeseries(args["path"] + "/timeseries/")
+el_loads, heat_load, gas_load, pv = import_timeseries(args["path"] + "/timeseries/")
 
 network = create_pypsa_network(
     buses,
@@ -75,10 +75,9 @@ network = create_pypsa_network(
     loads,
     el_loads,
     heat_load,
+    gas_load,
     pv,
 )
-
-network.generators.p_nom_extendable = False
 
 optimization(network, args)
 
