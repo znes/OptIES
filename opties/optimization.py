@@ -44,7 +44,11 @@ def optimization(network, args):
     end = args["end_snapshot"]
     snapshots = network.snapshots[start:end]
 
-    if network.lines.s_nom_extendable.any():
+    ext = network.lines[
+        network.lines.s_nom_extendable & network.lines.capital_cost != 0
+    ]
+
+    if not ext.empty:
         # s_nom_pre = s_nom_opt of previous iteration
         l_snom_pre = network.lines.s_nom.copy()
 
@@ -78,6 +82,8 @@ def optimization(network, args):
                 # Set snom_pre to s_nom_opt for next iteration
                 l_snom_pre = network.lines.s_nom_opt.copy()
                 t_snom_pre = network.transformers.s_nom_opt.copy()
+    else:
+        run_lopf(network, args, Constraints(args).extra_functionalities)
 
 
 def run_lopf(network, args, extra_functionality):
@@ -86,8 +92,6 @@ def run_lopf(network, args, extra_functionality):
     # snapshots
     start = args["start_snapshot"] - 1
     end = args["end_snapshot"]
-
-    # network.optimize.create_model()
 
     network.lopf(
         snapshots=network.snapshots[start:end],
