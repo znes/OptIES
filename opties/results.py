@@ -34,10 +34,11 @@ __author__ = "KathiEsterl"
 
 def calc_investment_cost(network):
     # elektrisches Netz: AC-lines & DC-lines
-
     network_costs = [0, 0]
 
-    ext_lines = network.lines[network.lines.s_nom_extendable]
+    ext_lines = network.lines[
+        network.lines.s_nom_extendable & network.lines.capital_cost != 0
+    ]
     ext_trafos = network.transformers[network.transformers.s_nom_extendable]
     ext_links = network.links[network.links.p_nom_extendable]
     ext_dc_lines = ext_links[ext_links.carrier == "DC"]
@@ -62,7 +63,6 @@ def calc_investment_cost(network):
         ).sum()
 
     # diverse Link-Komponenten
-
     link_costs = 0
 
     ext_links = ext_links[ext_links.carrier != "DC"]
@@ -73,7 +73,6 @@ def calc_investment_cost(network):
         ).sum()
 
     # Batteriespeicher, Wärmespeicher, Biogasspeicher
-
     sto_costs = [0, 0, 0]
 
     ext_storage = network.storage_units[network.storage_units.p_nom_extendable]
@@ -88,9 +87,20 @@ def calc_investment_cost(network):
         heat = ext_store[ext_store.index == "WSp"]
         sto_costs[1] = ((heat.e_nom_opt - heat.e_nom_min) * heat.capital_cost).sum()
         gas = ext_store[ext_store.index == "GSp"]
-        sto_costs[1] = ((gas.e_nom_opt - gas.e_nom_min) * gas.capital_cost).sum()
+        sto_costs[2] = ((gas.e_nom_opt - gas.e_nom_min) * gas.capital_cost).sum()
 
-    return network_costs, link_costs, sto_costs
+    # Erzeugungseinheiten
+    ext_gen = network.generators[network.generators.p_nom_extendable]
+
+    if not ext_gen.empty:
+        gen_costs = (
+            (network.generators.p_nom_opt - network.generators.p_nom_min)
+            * network.generators.capital_cost
+        ).sum()
+    else:
+        gen_costs = 0
+
+    return network_costs, link_costs, sto_costs, gen_costs
 
 
 def calc_marginal_cost(network):
@@ -122,13 +132,13 @@ def calc_marginal_cost(network):
 
 
 def calc_network_expansion(network):
-    lines = (network.lines.s_nom_opt - network.lines.s_nom_min)[
-        network.lines.s_nom_extendable
+    ext_lines = network.lines[
+        network.lines.s_nom_extendable & network.lines.capital_cost != 0
     ]
+    lines = ext_lines.s_nom_opt - ext_lines.s_nom_min
 
     ext_links = network.links[network.links.p_nom_extendable]
     ext_dc_lines = ext_links[ext_links.carrier == "DC"]
-
     dc_links = ext_dc_lines.p_nom_opt - ext_dc_lines.p_nom_min
 
     return lines, dc_links
@@ -143,6 +153,7 @@ def calc_results(network):
             "annualisierte marginale Kosten",
             "Investkosten: ",
             "annualisierte Investkosten elektrisches Netz",
+            "annualisierte Investkosten PV-Anlagen",
             "annualisierte Investkosten Batteriespeicher",
             "annualisierte Investkosten Wärmespeicher",
             "annualisierte Investkosten Biogasspeicher",
@@ -150,6 +161,7 @@ def calc_results(network):
             "Ausbau: ",
             "rel. Netzausbau",
             "abs. Netzausbau",
+            "Ausbau PV-Anlagen",
             "Ausbau Batteriespeicher",
             "Ausbau Wärmespeicher",
             "Ausbau Gasspeicher",
@@ -160,7 +172,8 @@ def calc_results(network):
             "Kosten aus Betrieb der BHKWs (inklusive Biogas)",
             "Betrieb: ",
             "Biogaserzeugung",
-            "gesamte elektrische Last",
+            "elektrischer Eigenverbrauch BGA",
+            "elektrische Last IES",
             "Erzeugung aus PV-Anlagen",
             "Erzeugung durch BHKW - Strom",
             "Netzbezug",
@@ -200,10 +213,12 @@ def calc_results(network):
     invest = calc_investment_cost(network)
 
     results.value["annualisierte Investkosten"] = (
-        sum(invest[0]) + invest[1] + sum(invest[2])
+        sum(invest[0]) + invest[1] + sum(invest[2]) + invest[3]
     )
 
     results.value["annualisierte Investkosten elektrisches Netz"] = sum(invest[0])
+
+    results.value["annualisierte Investkosten PV-Anlagen"] = invest[3]
 
     results.value["annualisierte Investkosten Batteriespeicher"] = invest[2][0]
 
@@ -248,16 +263,21 @@ def calc_results(network):
 
     # Systemausbau
 
-    results.value["abs. Netzausbau"] = (
-        calc_network_expansion(network)[0].sum()
-        - calc_network_expansion(network)[0][10]
-    )
+    results.value["abs. Netzausbau"] = calc_network_expansion(network)[0].sum()
 
     ext_lines = network.lines[network.lines.s_nom_extendable]
     results.value["rel. Netzausbau"] = (
         calc_network_expansion(network)[0].sum()
-        - calc_network_expansion(network)[0][10]
     ) / ext_lines.s_nom.sum()
+
+    results.value["Ausbau PV-Anlagen"] = (
+        (network.generators.p_nom_opt - network.generators.p_nom_min)[
+            network.generators.p_nom_extendable
+        ]
+        .groupby(network.generators.carrier)
+        .sum()
+        .sum()
+    )
 
     results.value["Ausbau Batteriespeicher"] = (
         (network.storage_units.p_nom_opt - network.storage_units.p_nom_min)[
@@ -271,6 +291,7 @@ def calc_results(network):
     results.value["Ausbau Wärmespeicher"] = (
         network.stores.e_nom_opt - network.stores.e_nom_min
     )[network.stores.index == "WSp"].sum()
+    results.unit["Ausbau Wärmespeicher"] = "MWh"
 
     results.value["Ausbau Gasspeicher"] = (
         network.stores.e_nom_opt - network.stores.e_nom_min
@@ -278,11 +299,14 @@ def calc_results(network):
 
     # Systemversorgung
 
-    results.value["gesamte elektrische Last"] = (
+    results.value["elektrische Last IES"] = (
         network.loads_t.p[network.loads[network.loads.carrier == "AC"].index]
         .sum()
         .sum()
+        - network.loads_t.p["elEV"].sum()
     )
+
+    results.value["elektrischer Eigenverbrauch BGA"] = network.loads_t.p["elEV"].sum()
 
     results.value["Wärmelast (Wärmenetz)"] = network.loads_t.p["WL"].sum().sum()
 
