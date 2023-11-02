@@ -39,14 +39,20 @@ def optimization(network, args):
     method = args["method"]
     path = args["csv_export"]
 
-    # snapshots
-    start = args["start_snapshot"] - 1
-    end = args["end_snapshot"]
-    snapshots = network.snapshots[start:end]
+    # Effizienzen der Wärme-Links der KWK-Anlagen an extra KWK-Constraints anpassen
+    # (bevor pyomo.model erstellt wird an dieser Stelle)
+    c_v = 0.2  # marginal loss for each additional generation of heat
+    # KWK: elektrische und Wärme-Links
+    electric_bool = network.links.carrier == "KWK_AC"
+    heat_bool = network.links.carrier == "KWK_heat"
+    electric_links = network.links.index[electric_bool]
+    heat_links = network.links.index[heat_bool]
+    # Effizienzen Wärme-Links
+    network.links.loc[heat_links, "efficiency"] = (
+        network.links.loc[electric_links, "efficiency"] / c_v
+    ).values.mean()
 
-    ext = network.lines[
-        network.lines.s_nom_extendable & network.lines.capital_cost != 0
-    ]
+    ext = network.lines[network.lines.s_nom_extendable]
 
     if not ext.empty:
         # s_nom_pre = s_nom_opt of previous iteration
@@ -81,7 +87,7 @@ def optimization(network, args):
 
                 # Set snom_pre to s_nom_opt for next iteration
                 l_snom_pre = network.lines.s_nom_opt.copy()
-                t_snom_pre = network.transformers.s_nom_opt.copy()
+
     else:
         run_lopf(network, args, Constraints(args).extra_functionalities)
 
@@ -114,9 +120,10 @@ def run_lopf(network, args, extra_functionality):
 
 def kwk_constraints_nmp(n, sns):
     # Konstanten
-    c_m = 0.75  # backpressure limit
-    c_v = 0.2  # marginal loss for each additional generation of heat
     nom_r = 1  # ratio between max heat output and max electric output
+    c_m = 0.75  # backpressure limit
+    # c_v = 0.2  # marginal loss for each additional generation of heat
+    # Effizienzen der Wärme-Links bereits im Vorwege angepasst (bevor pyomo.model erstellt wird)
 
     # KWK: elektrische und Wärme-Links
     electric_bool = n.links.carrier == "KWK_AC"
@@ -126,11 +133,6 @@ def kwk_constraints_nmp(n, sns):
 
     # Zusammengehörigkeit der elektrischen und Wärme-Links
     el_ht = {"KWK1_AC": "KWK1_W", "KWK2_AC": "KWK2_W", "KWK3_AC": "KWK3_W"}
-
-    # Effizienzen Wärme-Links
-    n.links.loc[heat_links, "efficiency"] = (
-        n.links.loc[electric_links, "efficiency"] / c_v
-    ).values.mean()
 
     # bei Ausbau der BHKWs
 
@@ -182,9 +184,10 @@ def kwk_constraints_nmp(n, sns):
 
 def kwk_constraints_pyomo(n, sns):
     # Konstanten
-    c_m = 0.75  # backpressure limit
-    c_v = 0.2  # marginal loss for each additional generation of heat
     nom_r = 1  # ratio between max heat output and max electric output
+    c_m = 0.75  # backpressure limit
+    # c_v = 0.2  # marginal loss for each additional generation of heat
+    # Effizienzen der Wärme-Links bereits im Vorwege angepasst (bevor pyomo.model erstellt wird)
 
     # KWK: elektrische und Wärme-Links
     electric_bool = n.links.carrier == "KWK_AC"
@@ -194,11 +197,6 @@ def kwk_constraints_pyomo(n, sns):
 
     # Zusammengehörigkeit der elektrischen und Wärme-Links
     el_ht = {"KWK1_AC": "KWK1_W", "KWK2_AC": "KWK2_W", "KWK3_AC": "KWK3_W"}
-
-    # Effizienzen Wärme-Links
-    n.links.loc[heat_links, "efficiency"] = (
-        n.links.loc[electric_links, "efficiency"] / c_v
-    ).values.mean()
 
     # bei Ausbau der BHKWs
     if n.links.loc[electric_links, "p_nom_extendable"].any():
