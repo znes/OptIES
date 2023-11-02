@@ -36,9 +36,7 @@ def calc_investment_cost(network):
     # elektrisches Netz: AC-lines & DC-lines
     network_costs = [0, 0]
 
-    ext_lines = network.lines[
-        network.lines.s_nom_extendable & network.lines.capital_cost != 0
-    ]
+    ext_lines = network.lines[network.lines.s_nom_extendable]
     ext_trafos = network.transformers[network.transformers.s_nom_extendable]
     ext_links = network.links[network.links.p_nom_extendable]
     ext_dc_lines = ext_links[ext_links.carrier == "DC"]
@@ -132,9 +130,7 @@ def calc_marginal_cost(network):
 
 
 def calc_network_expansion(network):
-    ext_lines = network.lines[
-        network.lines.s_nom_extendable & network.lines.capital_cost != 0
-    ]
+    ext_lines = network.lines[network.lines.s_nom_extendable]
     lines = ext_lines.s_nom_opt - ext_lines.s_nom_min
 
     ext_links = network.links[network.links.p_nom_extendable]
@@ -266,9 +262,12 @@ def calc_results(network):
     results.value["abs. Netzausbau"] = calc_network_expansion(network)[0].sum()
 
     ext_lines = network.lines[network.lines.s_nom_extendable]
-    results.value["rel. Netzausbau"] = (
-        calc_network_expansion(network)[0].sum()
-    ) / ext_lines.s_nom.sum()
+    if calc_network_expansion(network)[0].sum() > 0:
+        results.value["rel. Netzausbau"] = (
+            calc_network_expansion(network)[0].sum()
+        ) / ext_lines.s_nom.sum()
+    else:
+        results.value["rel. Netzausbau"] = 0
 
     results.value["Ausbau PV-Anlagen"] = (
         (network.generators.p_nom_opt - network.generators.p_nom_min)[
@@ -303,14 +302,14 @@ def calc_results(network):
         network.loads_t.p[network.loads[network.loads.carrier == "AC"].index]
         .sum()
         .sum()
-        - network.loads_t.p["elEV"].sum()
+        - network.loads_t.p["EV_el"].sum()
     )
 
-    results.value["elektrischer Eigenverbrauch BGA"] = network.loads_t.p["elEV"].sum()
+    results.value["elektrischer Eigenverbrauch BGA"] = network.loads_t.p["EV_el"].sum()
 
     results.value["Wärmelast (Wärmenetz)"] = network.loads_t.p["WL"].sum().sum()
 
-    results.value["Eigenverbrauch"] = network.loads_t.p["EV"].sum()
+    results.value["Eigenverbrauch"] = network.loads_t.p["EV_W"].sum()
 
     results.value["Erzeugung aus PV-Anlagen"] = (
         network.generators_t.p[
