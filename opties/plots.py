@@ -45,7 +45,7 @@ def plot_network(network):
 def AC_load(network):
     ac = network.loads[network.loads.carrier == "AC"]
 
-    network.loads_t.p[ac].plot()
+    network.loads_t.p[ac.index].plot()
 
     # TODO:
     # network.loads_t.p.iloc[:, :7].plot()
