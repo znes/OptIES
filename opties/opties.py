@@ -38,8 +38,9 @@ __author__ = "KathiEsterl, MatthiasW, mohsenmansouri"
 
 args = {
     "path": "data/",
-    "start_snapshot": 1,
-    "end_snapshot": 8760,
+    "use_real_data": True,
+    "start_snapshot": 1,  # real_data: 1056
+    "end_snapshot": 8760,  # real_data: 7200
     "method": {
         "type": "lopf",
         "n_iter": 2,
@@ -63,7 +64,9 @@ buses, lines, generators, storage_units, stores, links, loads = import_data(
     args["path"]
 )
 
-el_loads, heat_load, gas_load, pv = import_timeseries(args["path"] + "/timeseries/")
+el_loads, heat_load, gas_load, pv = import_timeseries(
+    args["path"] + "/timeseries/", args["use_real_data"]
+)
 
 network = create_pypsa_network(
     buses,
@@ -77,6 +80,7 @@ network = create_pypsa_network(
     heat_load,
     gas_load,
     pv,
+    args["use_real_data"],
 )
 
 optimization(network, args)

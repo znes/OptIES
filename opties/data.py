@@ -39,8 +39,6 @@ __author__ = "KathiEsterl"
 
 
 def import_data(path="data/"):
-    # Import von Komponenten aus csv-Dateien
-
     buses = pd.read_csv(path + "buses.csv").set_index("name")
     buses["geometry"] = buses["geometry"].apply(shapely.wkt.loads)
     buses = gpd.GeoDataFrame(buses, geometry="geometry")
@@ -57,21 +55,44 @@ def import_data(path="data/"):
     return buses, lines, generators, storage_units, stores, links, loads
 
 
-def import_timeseries(path="data/timeseries/"):
-    el_loads = pd.read_csv(path + "el_load_synth.csv").set_index("time")
-    el_loads.index = pd.date_range("2019-01-01 00:00", "2019-12-31 23:00", freq="H")
+def import_timeseries(path="data/timeseries/", use_real_data=False):
+    if use_real_data:
+        el_loads = pd.read_csv(path + "el_load_real_Oct23.csv").set_index("time")
+        el_loads.index = pd.date_range("2023-02-14 00:00", "2023-10-27 23:00", freq="H")
 
-    heat_load = pd.read_csv(path + "heat_load_synth.csv").set_index("time")
-    heat_load.index = pd.date_range("2019-01-01 00:00", "2019-12-31 23:00", freq="H")
+        heat_load = pd.read_csv(path + "heat_load_synth.csv").set_index("time")[
+            1056:7200
+        ]
+        heat_load.index = pd.date_range(
+            "2023-02-14 00:00", "2023-10-27 23:00", freq="H"
+        )
 
-    gas_load = pd.read_csv(path + "gas_load.csv").set_index("time")
-    gas_load.index = pd.date_range("2019-01-01 00:00", "2019-12-31 23:00", freq="H")
+        gas_load = pd.read_csv(path + "gas_load.csv").set_index("time")[1056:7200]
+        gas_load.index = pd.date_range("2023-02-14 00:00", "2023-10-27 23:00", freq="H")
 
-    pv = pd.read_csv(path + "pv_timeseries.csv")
-    pv = pd.Series(
-        pv["p_max_pu"].values,
-        index=pd.date_range("2019-01-01 00:00", "2019-12-31 23:00", freq="H"),
-    )
+        pv = pd.read_csv(path + "pv_timeseries.csv")[1056:7200]
+        pv = pd.Series(
+            pv["p_max_pu"].values,
+            index=pd.date_range("2023-02-14 00:00", "2023-10-27 23:00", freq="H"),
+        )
+
+    else:
+        el_loads = pd.read_csv(path + "el_load_synth.csv").set_index("time")
+        el_loads.index = pd.date_range("2019-01-01 00:00", "2019-12-31 23:00", freq="H")
+
+        heat_load = pd.read_csv(path + "heat_load_synth.csv").set_index("time")
+        heat_load.index = pd.date_range(
+            "2019-01-01 00:00", "2019-12-31 23:00", freq="H"
+        )
+
+        gas_load = pd.read_csv(path + "gas_load.csv").set_index("time")
+        gas_load.index = pd.date_range("2019-01-01 00:00", "2019-12-31 23:00", freq="H")
+
+        pv = pd.read_csv(path + "pv_timeseries.csv")
+        pv = pd.Series(
+            pv["p_max_pu"].values,
+            index=pd.date_range("2019-01-01 00:00", "2019-12-31 23:00", freq="H"),
+        )
 
     return el_loads, heat_load, gas_load, pv
 
@@ -88,12 +109,19 @@ def create_pypsa_network(
     heat_load,
     gas_load,
     pv,
+    use_real_data=False,
 ):
     network = pypsa.Network()
 
-    network.set_snapshots(
-        pd.date_range("2019-01-01 00:00", "2019-12-31 23:00", freq="H")
-    )
+    if use_real_data:
+        network.set_snapshots(
+            pd.date_range("2023-02-14 00:00", "2023-10-27 23:00", freq="H")
+        )
+
+    else:
+        network.set_snapshots(
+            pd.date_range("2019-01-01 00:00", "2019-12-31 23:00", freq="H")
+        )
 
     # Buses
 
