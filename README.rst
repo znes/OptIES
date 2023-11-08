@@ -1,6 +1,7 @@
 OptIES
 ======
-Das vorliegende Modell dient der Optimierung regionaler Energiesysteme am Beispiel des `IES Dörpum <https://www.aktivregion-nf-nord.de/fileadmin/user_upload/KT_Klimawandel_Energie/Projekte/IES_D%C3%B6rpum/07.51_-_Beschreibung_-_Projekt_57_IES_D%C3%B6rpum.pdf>`_. Ziel des Projekts ist die Untersuchung von verschiedenen Betriebs- und Ausbaustrategien für eine aus lokaler und gesamtsystemischer Perspektive optimale Entwicklung der elektrischen und thermischen Energieversorgung am Beispiel der betrachteten Region. 
+Das vorliegende Modell dient der Optimierung regionaler Energiesysteme am Beispiel des `IES Dörpum <https://www.aktivregion-nf-nord.de/fileadmin/user_upload/KT_Klimawandel_Energie/Projekte/IES_D%C3%B6rpum/07.51_-_Beschreibung_-_Projekt_57_IES_D%C3%B6rpum.pdf>`_. Ziel des Projekts ist die Untersuchung von verschiedenen Betriebs- und Ausbaustrategien für eine aus lokaler und gesamtsystemischer Perspektive optimale Entwicklung der elektrischen und thermischen Energieversorgung am Beispiel der betrachteten Region.
+Für die Energiesystemmodellierung und -optimierung wird die offene Software-Toolbox `PyPSA <https://github.com/PyPSA/PyPSA>`_ verwendet.
 
 
 Installation für Entwickler*innen
