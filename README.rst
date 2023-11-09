@@ -8,6 +8,7 @@ Das Forschungsprojekt *optIES* wird  durch die `Europa-Universität Flensburg <h
 
 Installation für Entwickler*innen
 =================================
+Das Tool befindet sich derzeit noch in der Entwicklung. Eine Installation wird in einer entsprechenden virtuellen Umgebung für Python empfohlen. Im Folgenden sind die zu installierenden Pakete gelistet.
 
 .. code-block::
 
@@ -27,6 +28,13 @@ Installation für Entwickler*innen
 
   $ git clone https://github.com/znes/OptIES.git
 
+
+Code und Datenstruktur
+======================
+
+Das zentrale Skript innerhalb dieses Repositories bildet :code:`opties.py`, welches der Konfigurierung und Ausführung der Energiesystemoptimierung dient. :code:`data.py` stellt alle notwendigen Funktionen zum Import der notwendigen Eingangsdaten und zum Erstellen eines entsprechenden PyPSA Networks bereit. Funktionalitäten rund um die Optimierungsrechnungen sind in :code:`optimization.py` zu finden. :code:`results.py` und :code:`plots.py` wiederum halten Funktionalitäten zur Asuwertung und Darstellung der Optimierungsergebnisse bereit. 
+
+Neben den hier beschriebenen Skripten werden zusätzliche Daten für die Durchführung von Optimierungsrechnungen des vorliegenden Energiesystems benötigt. Eine Veröffentlichung geeigneter Inputdatensätze auf `Zenodo <https://zenodo.org/>`_ ist in Arbeit. Diese Inputdatensätze werden einerseits reale (Mess)daten und andererseits synthetisch generierte aber möglichst realitätsnahe Daten enthalten. 
 
 Copyleft
 ========
