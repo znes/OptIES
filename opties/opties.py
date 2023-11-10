@@ -38,12 +38,12 @@ __author__ = "KathiEsterl, MatthiasW, mohsenmansouri"
 
 args = {
     "path": "data/",
-    "use_real_data": True,
-    "start_snapshot": 1,  # real_data: 1056
-    "end_snapshot": 8760,  # real_data: 7200
+    "use_real_data": False,
+    "start_snapshot": 1,  # comparison with real_data: 1081
+    "end_snapshot": 8760,  # comparison with real_data: 7451
     "method": {
         "type": "lopf",
-        "n_iter": 2,
+        "n_iter": 4,
         "pyomo": True,
     },
     "solver_name": "gurobi",
@@ -56,7 +56,7 @@ args = {
         "method": 2,
         "BarHomogeneous": 1,
     },
-    "csv_export": "opties_results",
+    "csv_export": "opties_results/",
 }
 
 

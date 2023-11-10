@@ -57,23 +57,23 @@ def import_data(path="data/"):
 
 def import_timeseries(path="data/timeseries/", use_real_data=False):
     if use_real_data:
-        el_loads = pd.read_csv(path + "el_load_real_Oct23.csv").set_index("time")
-        el_loads.index = pd.date_range("2023-02-14 00:00", "2023-10-27 23:00", freq="H")
+        el_loads = pd.read_csv(path + "el_load_real.csv").set_index("time")
+        el_loads.index = pd.date_range("2023-02-15 00:00", "2023-11-07 10:00", freq="H")
 
         heat_load = pd.read_csv(path + "heat_load_synth.csv").set_index("time")[
-            1056:7200
+            1080:7451
         ]
         heat_load.index = pd.date_range(
-            "2023-02-14 00:00", "2023-10-27 23:00", freq="H"
+            "2023-02-15 00:00", "2023-11-07 10:00", freq="H"
         )
 
-        gas_load = pd.read_csv(path + "gas_load.csv").set_index("time")[1056:7200]
-        gas_load.index = pd.date_range("2023-02-14 00:00", "2023-10-27 23:00", freq="H")
+        gas_load = pd.read_csv(path + "gas_load.csv").set_index("time")[1080:7451]
+        gas_load.index = pd.date_range("2023-02-15 00:00", "2023-11-07 10:00", freq="H")
 
-        pv = pd.read_csv(path + "pv_timeseries.csv")[1056:7200]
+        pv = pd.read_csv(path + "pv_timeseries.csv")[1080:7451]
         pv = pd.Series(
             pv["p_max_pu"].values,
-            index=pd.date_range("2023-02-14 00:00", "2023-10-27 23:00", freq="H"),
+            index=pd.date_range("2023-02-15 00:00", "2023-11-07 10:00", freq="H"),
         )
 
     else:
@@ -115,7 +115,7 @@ def create_pypsa_network(
 
     if use_real_data:
         network.set_snapshots(
-            pd.date_range("2023-02-14 00:00", "2023-10-27 23:00", freq="H")
+            pd.date_range("2023-02-15 00:00", "2023-11-07 10:00", freq="H")
         )
 
     else:
