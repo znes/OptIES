@@ -142,8 +142,10 @@ def calc_network_expansion(network):
 
 def calc_results(network):
     results = pd.DataFrame(
-        columns=["unit", "value"],
+        columns=["Einheit", "Wert"],
         index=[
+            "Objective:",
+            "Systemkosten: ",
             "annualisierte Systemkosten",
             "annualisierte Investkosten",
             "annualisierte marginale Kosten",
@@ -183,64 +185,72 @@ def calc_results(network):
         ],
     )
 
-    results.unit[results.index.str.contains("Netzbezug")] = "MWh"
-    results.unit[results.index.str.contains("Netzeinspeisung")] = "MWh"
-    results.unit[results.index.str.contains("Kosten")] = "EUR/a"
-    results.unit[results.index.str.contains("kosten")] = "EUR/a"
-    results.unit[results.index.str.contains("Erträge")] = "EUR/a"
-    results.unit[results.index.str.contains("Ausbau")] = "MW"
-    results.unit[results.index.str.contains("ausbau")] = "MW"
-    results.unit[results.index.str.contains("Last")] = "MWh"
-    results.unit[results.index.str.contains("last")] = "MWh"
-    results.unit[results.index.str.contains("verbrauch")] = "MWh"
-    results.unit[results.index.str.contains("restlich")] = "MWh"
-    results.unit[results.index.str.contains("Erzeugung")] = "MWh"
-    results.unit[results.index.str.contains("erzeugung")] = "MWh"
-    results.unit[results.index.str.contains("rel.")] = "p.u."
-    results.unit[results.index.str.contains(":")] = "-"
-    results.value[results.index.str.contains(":")] = "-"
+    results.Einheit[results.index.str.contains("Netzbezug")] = "MWh"
+    results.Einheit[results.index.str.contains("Netzeinspeisung")] = "MWh"
+    results.Einheit[results.index.str.contains("Kosten")] = "EUR/a"
+    results.Einheit[results.index.str.contains("kosten")] = "EUR/a"
+    results.Einheit[results.index.str.contains("Erträge")] = "EUR/a"
+    results.Einheit[results.index.str.contains("Ausbau")] = "MW"
+    results.Einheit[results.index.str.contains("ausbau")] = "MW"
+    results.Einheit[results.index.str.contains("Last")] = "MWh"
+    results.Einheit[results.index.str.contains("last")] = "MWh"
+    results.Einheit[results.index.str.contains("verbrauch")] = "MWh"
+    results.Einheit[results.index.str.contains("restlich")] = "MWh"
+    results.Einheit[results.index.str.contains("Erzeugung")] = "MWh"
+    results.Einheit[results.index.str.contains("erzeugung")] = "MWh"
+    results.Einheit[results.index.str.contains("rel.")] = "p.u."
+    results.Einheit[results.index.str.contains(":")] = "-"
+    results.Wert[results.index.str.contains(":")] = "-"
+
+    results.Wert["Objective"] = network.objective
+    results.Einheit["Objective"] = '(€)'
+    
+    # TODO: post-ex Kostenberechnung für Spitzenlastkessel ?
+    # da marginal_costs küsntlich erhöht um Einsatz zu verringern
 
     # Systemkosten
+    
+    invest = calc_investment_cost(network)
+    
+    marg = calc_marginal_cost(network)
 
-    results.value["annualisierte Systemkosten"] = network.objective
+    results.Wert["annualisierte Systemkosten"] = (sum(invest[0]) + invest[1] + sum(invest[2]) + invest[3]) + marg
 
     # Investkosten
 
-    invest = calc_investment_cost(network)
-
-    results.value["annualisierte Investkosten"] = (
+    results.Wert["annualisierte Investkosten"] = (
         sum(invest[0]) + invest[1] + sum(invest[2]) + invest[3]
     )
 
-    results.value["annualisierte Investkosten elektrisches Netz"] = sum(invest[0])
+    results.Wert["annualisierte Investkosten elektrisches Netz"] = sum(invest[0])
 
-    results.value["annualisierte Investkosten PV-Anlagen"] = invest[3]
+    results.Wert["annualisierte Investkosten PV-Anlagen"] = invest[3]
 
-    results.value["annualisierte Investkosten Batteriespeicher"] = invest[2][0]
+    results.Wert["annualisierte Investkosten Batteriespeicher"] = invest[2][0]
 
-    results.value["annualisierte Investkosten Wärmespeicher"] = invest[2][1]
+    results.Wert["annualisierte Investkosten Wärmespeicher"] = invest[2][1]
 
-    results.value["annualisierte Investkosten Biogasspeicher"] = invest[2][2]
+    results.Wert["annualisierte Investkosten Biogasspeicher"] = invest[2][2]
 
-    results.value["annualisierte Investkosten diverser Link-Komponenten"] = invest[1]
+    results.Wert["annualisierte Investkosten diverser Link-Komponenten"] = invest[1]
 
     # marginale Kosten
 
-    results.value["annualisierte marginale Kosten"] = calc_marginal_cost(network)
+    results.Wert["annualisierte marginale Kosten"] = marg
 
-    results.value["Erträge aus Trocknungsanlage"] = network.links_t.p0["TA"].mul(
+    results.Wert["Erträge aus Trocknungsanlage"] = network.links_t.p0["TA"].mul(
         network.snapshot_weightings.objective, axis=0
     ).sum() * (network.links.loc["TA"].marginal_cost)
 
-    results.value["Erträge aus Netzeinspeisung"] = network.links_t.p0["NA_Sp"].mul(
+    results.Wert["Erträge aus Netzeinspeisung"] = network.links_t.p0["NA_Sp"].mul(
         network.snapshot_weightings.objective, axis=0
     ).sum() * (network.links.loc["NA_Sp"].marginal_cost)
 
-    results.value["Kosten aus Netzbezug"] = network.generators_t.p["NeAn"].mul(
+    results.Wert["Kosten aus Netzbezug"] = network.generators_t.p["NeAn"].mul(
         network.snapshot_weightings.objective, axis=0
     ).sum() * (network.generators.loc["NeAn"].marginal_cost)
 
-    results.value["Kosten aus Betrieb der BHKWs (inklusive Biogas)"] = (
+    results.Wert["Kosten aus Betrieb der BHKWs (inklusive Biogas)"] = (
         network.generators_t.p["BGA1"]
         .mul(network.snapshot_weightings.objective, axis=0)
         .sum()
@@ -259,17 +269,17 @@ def calc_results(network):
 
     # Systemausbau
 
-    results.value["abs. Netzausbau"] = calc_network_expansion(network)[0].sum()
+    results.Wert["abs. Netzausbau"] = calc_network_expansion(network)[0].sum()
 
     ext_lines = network.lines[network.lines.s_nom_extendable]
     if calc_network_expansion(network)[0].sum() > 0:
-        results.value["rel. Netzausbau"] = (
+        results.Wert["rel. Netzausbau"] = (
             calc_network_expansion(network)[0].sum()
         ) / ext_lines.s_nom.sum()
     else:
-        results.value["rel. Netzausbau"] = 0
+        results.Wert["rel. Netzausbau"] = 0
 
-    results.value["Ausbau PV-Anlagen"] = (
+    results.Wert["Ausbau PV-Anlagen"] = (
         (network.generators.p_nom_opt - network.generators.p_nom_min)[
             network.generators.p_nom_extendable
         ]
@@ -278,7 +288,7 @@ def calc_results(network):
         .sum()
     )
 
-    results.value["Ausbau Batteriespeicher"] = (
+    results.Wert["Ausbau Batteriespeicher"] = (
         (network.storage_units.p_nom_opt - network.storage_units.p_nom_min)[
             network.storage_units.p_nom_extendable
         ]
@@ -287,31 +297,31 @@ def calc_results(network):
         .sum()
     )
 
-    results.value["Ausbau Wärmespeicher"] = (
+    results.Wert["Ausbau Wärmespeicher"] = (
         network.stores.e_nom_opt - network.stores.e_nom_min
     )[network.stores.index == "WSp"].sum()
-    results.unit["Ausbau Wärmespeicher"] = "MWh"
+    results.Einheit["Ausbau Wärmespeicher"] = "MWh"
 
-    results.value["Ausbau Gasspeicher"] = (
+    results.Wert["Ausbau Gasspeicher"] = (
         network.stores.e_nom_opt - network.stores.e_nom_min
     )[network.stores.index == "GSp"].sum()
 
     # Systemversorgung
 
-    results.value["elektrische Last IES"] = (
+    results.Wert["elektrische Last IES"] = (
         network.loads_t.p[network.loads[network.loads.carrier == "AC"].index]
         .sum()
         .sum()
         - network.loads_t.p["EV_el"].sum()
     )
 
-    results.value["elektrischer Eigenverbrauch BGA"] = network.loads_t.p["EV_el"].sum()
+    results.Wert["elektrischer Eigenverbrauch BGA"] = network.loads_t.p["EV_el"].sum()
 
-    results.value["Wärmelast (Wärmenetz)"] = network.loads_t.p["WL"].sum().sum()
+    results.Wert["Wärmelast (Wärmenetz)"] = network.loads_t.p["WL"].sum().sum()
 
-    results.value["Eigenverbrauch"] = network.loads_t.p["EV_W"].sum()
+    results.Wert["Eigenverbrauch"] = network.loads_t.p["EV_W"].sum()
 
-    results.value["Erzeugung aus PV-Anlagen"] = (
+    results.Wert["Erzeugung aus PV-Anlagen"] = (
         network.generators_t.p[
             network.generators[network.generators.carrier == "PV"].index
         ]
@@ -319,31 +329,31 @@ def calc_results(network):
         .sum()
     )
 
-    results.value["Erzeugung durch BHKW - Strom"] = abs(
+    results.Wert["Erzeugung durch BHKW - Strom"] = abs(
         network.links_t.p1[network.links[network.links.carrier == "KWK_AC"].index]
         .sum()
         .sum()
     )
 
-    results.value["Erzeugung durch BHKW - Wärme"] = abs(
+    results.Wert["Erzeugung durch BHKW - Wärme"] = abs(
         network.links_t.p1[network.links[network.links.carrier == "KWK_heat"].index]
         .sum()
         .sum()
     )
 
-    results.value["Erzeugung durch Spitzenlastkessel"] = network.generators_t.p[
+    results.Wert["Erzeugung durch Spitzenlastkessel"] = network.generators_t.p[
         "SpK"
     ].sum()
 
-    results.value["Last der Trocknungsanlage"] = network.links_t.p0["TA"].sum()
+    results.Wert["Last der Trocknungsanlage"] = network.links_t.p0["TA"].sum()
 
-    results.value["restliche Abwärme"] = network.links_t.p0["Abw"].sum()
+    results.Wert["restliche Abwärme"] = network.links_t.p0["Abw"].sum()
 
-    results.value["Netzbezug"] = network.generators_t.p["NeAn"].sum()
+    results.Wert["Netzbezug"] = network.generators_t.p["NeAn"].sum()
 
-    results.value["Netzeinspeisung"] = network.links_t.p0["NA_Sp"].sum()
+    results.Wert["Netzeinspeisung"] = network.links_t.p0["NA_Sp"].sum()
 
-    results.value["Biogaserzeugung"] = (
+    results.Wert["Biogaserzeugung"] = (
         network.generators_t.p["BGA1"].sum() + network.generators_t.p["BGA2"].sum()
     )
 
