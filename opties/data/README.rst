@@ -1,9 +1,9 @@
 Notwendige Inputdaten
 =====================
 
-In diesem Ordner müssen sich die Inputdatensätze befinden.
+In diesem Ordner sollten sich die Inputdatensätze in Form von csv-Dateien befinden.
 
-Eine Veröffentlichung geeigneter Inputdatensätze auf `Zenodo <https://zenodo.org/>`_ ist in Arbeit. Diese Datensätze werden einerseits reale Messdaten und andererseits synthetisch generierte Daten enthalten. Letztere werden anhand der Messzeitreihen validiert, um sicherzustellen, dass sie möglichst realitätsnah sind. 
+Eine Veröffentlichung geeigneter Inputdatensätze auf `zenodo <https://zenodo.org/>`_ ist in Arbeit. Diese Datensätze werden einerseits reale Messdaten und andererseits synthetisch generierte Daten enthalten. Letztere werden anhand der Messzeitreihen validiert, um sicherzustellen, dass sie möglichst realitätsnah sind. 
 
 
 Copyleft
