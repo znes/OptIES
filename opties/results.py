@@ -162,7 +162,7 @@ def calc_results(network):
             "Ausbau PV-Anlagen",
             "Ausbau Batteriespeicher",
             "Ausbau Wärmespeicher",
-            "Ausbau Gasspeicher",
+            #"Ausbau Gasspeicher",
             "Betriebskosten: ",
             "Erträge aus Trocknungsanlage",
             "Erträge aus Netzeinspeisung",
@@ -190,8 +190,8 @@ def calc_results(network):
     results.Einheit[results.index.str.contains("Kosten")] = "EUR/a"
     results.Einheit[results.index.str.contains("kosten")] = "EUR/a"
     results.Einheit[results.index.str.contains("Erträge")] = "EUR/a"
-    results.Einheit[results.index.str.contains("Ausbau")] = "MW"
-    results.Einheit[results.index.str.contains("ausbau")] = "MW"
+    results.Einheit[results.index.str.contains("Ausbau")] = "kW"
+    results.Einheit[results.index.str.contains("ausbau")] = "kW"
     results.Einheit[results.index.str.contains("Last")] = "MWh"
     results.Einheit[results.index.str.contains("last")] = "MWh"
     results.Einheit[results.index.str.contains("verbrauch")] = "MWh"
@@ -269,7 +269,7 @@ def calc_results(network):
 
     # Systemausbau
 
-    results.Wert["abs. Netzausbau"] = calc_network_expansion(network)[0].sum()
+    results.Wert["abs. Netzausbau"] = calc_network_expansion(network)[0].sum() * 1000 #kW
 
     ext_lines = network.lines[network.lines.s_nom_extendable]
     if calc_network_expansion(network)[0].sum() > 0:
@@ -286,7 +286,7 @@ def calc_results(network):
         .groupby(network.generators.carrier)
         .sum()
         .sum()
-    )
+    ) * 1000 # kW
 
     results.Wert["Ausbau Batteriespeicher"] = (
         (network.storage_units.p_nom_opt - network.storage_units.p_nom_min)[
@@ -295,16 +295,17 @@ def calc_results(network):
         .groupby(network.storage_units.carrier)
         .sum()
         .sum()
-    )
+    ) * 1000 # kW
 
     results.Wert["Ausbau Wärmespeicher"] = (
         network.stores.e_nom_opt - network.stores.e_nom_min
-    )[network.stores.index == "WSp"].sum()
+    )[network.stores.index == "WSp"].sum() 
     results.Einheit["Ausbau Wärmespeicher"] = "MWh"
 
-    results.Wert["Ausbau Gasspeicher"] = (
+    '''results.Wert["Ausbau Gasspeicher"] = (
         network.stores.e_nom_opt - network.stores.e_nom_min
     )[network.stores.index == "GSp"].sum()
+    results.Einheit["Ausbau Gasspeicher"] = "MWh"'''
 
     # Systemversorgung
 
