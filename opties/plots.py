@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
 # Copyright 2023
 # Europa-Universität Flensburg,
-# Centre for Sustainable Energy Systems,
-# FossilExit Research Group
+# Centre for Sustainable Energy Systems
 
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Affero General Public License as
@@ -23,6 +22,7 @@ This file contains the functions related to plot the optimization results.
 """
 
 import pandas as pd
+import matplotlib
 import matplotlib.pyplot as plt
 
 __copyright__ = (
@@ -33,12 +33,16 @@ __license__ = "GNU Affero General Public License Version 3 (AGPL-3.0)"
 __author__ = "KathiEsterl"
 
 
+font = {"family": "normal", "size": 20}
+
+matplotlib.rc("font", **font)
+
+
 # Netz
 
 
 def plot_network(network):
     network.plot(bus_sizes=0.00000001, line_widths=1, link_widths=1)
-    # TODO (optional): map in Hintergrund
 
 
 # Lasten
@@ -87,7 +91,7 @@ def AN_load(network, snapshots=[0, 8759]):
 
 def heat_load(network, snapshots=[0, 8759]):
     fig, ax = plt.subplots()
-    ax.set_ylabel("elektrische Last in MW")
+    ax.set_ylabel("Wärmelast in MW")
     ax.set_xlabel("Zeitschritte")
 
     heat = network.loads[network.loads.carrier == "heat"].index
@@ -143,7 +147,8 @@ def grid_usage(network, snapshots=[0, 8759]):
 
 def el_gen_ies(network, snapshots=[0, 8759]):
     fig, ax = plt.subplots()
-    ax.set_ylabel("elektrische Versorgung des IES in kW")
+
+    ax.set_ylabel("Einspeisung in kW")
     ax.set_xlabel("Zeitschritte")
 
     ax.plot((network.links_t.p0["IES"].resample("5H").mean() * 1000), label="BGA")
@@ -159,6 +164,7 @@ def el_gen_ies(network, snapshots=[0, 8759]):
         label=pv.index,
     )
 
+    ax.set_title("Elektrische Versorgung des IES")
     fig.legend(loc="upper right")
 
 
