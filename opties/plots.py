@@ -164,7 +164,7 @@ def el_gen_ies(network, snapshots=[0, 8759]):
         label=pv.index,
     )
 
-    ax.set_title("Elektrische Versorgung des IES")
+    ax.set_title("Elektrische Versorgung des IES Dörpum")
     fig.legend(loc="upper right")
 
 
