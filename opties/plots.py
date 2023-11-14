@@ -23,6 +23,7 @@ This file contains the functions related to plot the optimization results.
 """
 
 import pandas as pd
+import matplotlib.pyplot as plt
 
 __copyright__ = (
     "Europa-Universität Flensburg, Centre for Sustainable Energy Systems, "
@@ -37,215 +38,569 @@ __author__ = "KathiEsterl"
 
 def plot_network(network):
     network.plot(bus_sizes=0.00000001, line_widths=1, link_widths=1)
+    # TODO (optional): map in Hintergrund
 
 
 # Lasten
 
 
-def AC_load(network, snapshots=[0,8759]):
+def AC_load(network, snapshots=[0, 8759]):
+    fig, ax = plt.subplots()
+    ax.set_ylabel("elektrische Last in kW")
+    ax.set_xlabel("Zeitschritte")
+
     ac = network.loads[network.loads.carrier == "AC"]
+    ax.plot(
+        (
+            network.loads_t.p[ac.index]
+            .iloc[snapshots[0] : snapshots[1]]
+            .resample("5H")
+            .mean()
+        )
+        * 1000,
+        label=ac.index,
+    )
 
-    network.loads_t.p[ac.index].iloc[snapshots[0]:snapshots[1]].resample("5H").mean().plot()
+    fig.legend(loc="upper right")
 
 
-def AN_load(network, snapshots=[0,8759]):
+def AN_load(network, snapshots=[0, 8759]):
+    fig, ax = plt.subplots()
+    ax.set_ylabel("elektrische Last in kW")
+    ax.set_xlabel("Zeitschritte")
+
     ac = network.loads[network.loads.carrier == "AC"]
-    ac.drop('EV_el', inplace=True)
-    
-    network.loads_t.p[ac.index].iloc[snapshots[0]:snapshots[1]].resample("5H").mean().plot()
+    ac.drop("EV_el", inplace=True)
+    ax.plot(
+        (
+            network.loads_t.p[ac.index]
+            .iloc[snapshots[0] : snapshots[1]]
+            .resample("5H")
+            .mean()
+        )
+        * 1000,
+        label=ac.index,
+    )
+
+    fig.legend(loc="upper right")
 
 
-def heat_load(network, snapshots=[0,8759]):
+def heat_load(network, snapshots=[0, 8759]):
+    fig, ax = plt.subplots()
+    ax.set_ylabel("elektrische Last in MW")
+    ax.set_xlabel("Zeitschritte")
+
     heat = network.loads[network.loads.carrier == "heat"].index
+    for index in heat:
+        ax.plot(
+            network.loads_t.p[index]
+            .iloc[snapshots[0] : snapshots[1]]
+            .resample("5H")
+            .mean(),
+            label=index,
+        )
+    ax.plot(
+        network.links_t.p0["TA"]
+        .iloc[snapshots[0] : snapshots[1]]
+        .resample("5H")
+        .mean(),
+        label="TA",
+    )
 
-    network.loads_t.p[heat].iloc[snapshots[0]:snapshots[1]].resample("5H").mean().plot()
-
-    network.links_t.p0["TA"].iloc[snapshots[0]:snapshots[1]].resample("5H").mean().plot(label="TA", legend=True)
+    fig.legend(loc="upper right")
 
 
-# elektrische Einspeisung
+# Netzeinspeiung und Netzbezug
 
 
-def el_gen(network, snapshots=[0,8759]):
-    AC_gen = network.generators[
-        network.generators.bus.isin(network.buses[network.buses.carrier == "AC"].index)
-    ].index
+def grid_usage(network, snapshots=[0, 8759]):
+    fig, ax = plt.subplots()
+    ax.set_ylabel("Leistung in kW")
+    ax.set_xlabel("Zeitschritte")
 
-    network.generators_t.p[AC_gen].iloc[snapshots[0]:snapshots[1]].resample("5H").mean().plot()
+    ax.plot(
+        network.generators_t.p["NeAn"]
+        .iloc[snapshots[0] : snapshots[1]]
+        .resample("5H")
+        .mean()
+        * 1000,
+        label="Netzbezug",
+    )
+    ax.plot(
+        network.links_t.p0["NA_Sp"]
+        .iloc[snapshots[0] : snapshots[1]]
+        .resample("5H")
+        .mean()
+        * 1000,
+        label="Einspeisung ins Netz",
+    )
+
+    fig.legend(loc="upper right")
 
 
-# Wärmeerzeugung
+# elektrische Einspeisung in das IES
 
 
-def heat_gen(network, snapshots=[0,8759]):
-    network.generators_t.p["SpK"].iloc[snapshots[0]:snapshots[1]].resample("5H").mean().plot(label="SpK", legend=True)
+def el_gen_ies(network, snapshots=[0, 8759]):
+    fig, ax = plt.subplots()
+    ax.set_ylabel("elektrische Versorgung des IES in kW")
+    ax.set_xlabel("Zeitschritte")
 
-    abs(network.links_t.p1["KWK1_W"]).iloc[snapshots[0]:snapshots[1]].resample("5H").mean().plot(label="KWK1_W", legend=True)
+    ax.plot((network.links_t.p0["IES"].resample("5H").mean() * 1000), label="BGA")
+    pv = network.generators[network.generators.carrier == "PV"]
+    ax.plot(
+        (
+            network.generators_t.p[pv.index]
+            .iloc[snapshots[0] : snapshots[1]]
+            .resample("5H")
+            .mean()
+        )
+        * 1000,
+        label=pv.index,
+    )
 
-    abs(network.links_t.p1["KWK2_W"]).iloc[snapshots[0]:snapshots[1]].resample("5H").mean().plot(label="KWK2_W", legend=True)
-
-    abs(network.links_t.p1["KWK3_W"]).iloc[snapshots[0]:snapshots[1]].resample("5H").mean().plot(label="KWK3_W", legend=True)
+    fig.legend(loc="upper right")
 
 
 # Nutzung der PV-Anlagen
 
 
-def pv_gen(network, snapshots=[0,8759]):
-    pv = network.generators[network.generators.carrier=='PV']
-    
-    network.generators_t.p[pv.index].iloc[snapshots[0]:snapshots[1]].resample("5H").mean().plot()
+def pv_gen(network, snapshots=[0, 8759]):
+    fig, ax = plt.subplots()
+    ax.set_ylabel("elektrische Einspeisung in kW")
+    ax.set_xlabel("Zeitschritte")
+
+    pv = network.generators[network.generators.carrier == "PV"]
+    ax.plot(
+        (
+            network.generators_t.p[pv.index]
+            .iloc[snapshots[0] : snapshots[1]]
+            .resample("5H")
+            .mean()
+        )
+        * 1000,
+        label=pv.index,
+    )
+
+    fig.legend(loc="upper right")
 
 
 # Nutzung des Batteriespeichers
 
 
-def battery_usage(network, snapshots=[0,8759]):
-    network.storage_units_t.state_of_charge.iloc[snapshots[0]:snapshots[1]].resample("5H").mean().plot()
+def battery_usage(network, snapshots=[0, 8759]):
+    fig, ax = plt.subplots()
+    ax.set_ylabel("Ladezustand der Batterie in kWh")
+    ax.set_xlabel("Zeitschritte")
+
+    ax.plot(
+        (
+            network.storage_units_t.state_of_charge.iloc[snapshots[0] : snapshots[1]]
+            .resample("5H")
+            .mean()
+        )
+        * 1000,
+        label="BSp",
+    )
+
+    fig.legend(loc="upper right")
 
 
-def battery_pv_usage(network, snapshots=[0,8759]):
-    pv = network.generators[network.generators.carrier=='PV']
-    
-    network.generators_t.p[pv.index[0]].iloc[snapshots[0]:snapshots[1]].resample("5H").mean().plot(label='PV1', legend=True)
-    network.generators_t.p[pv.index[1]].iloc[snapshots[0]:snapshots[1]].resample("5H").mean().plot(label='PV2', legend=True)
-    
-    abs(network.storage_units_t.p[network.storage_units_t.p<0].fillna(0)).iloc[snapshots[0]:snapshots[1]].resample("5H").mean().plot(label='BSp', legend=True)
+def battery_pv_usage(network, snapshots=[0, 8759]):
+    fig, ax = plt.subplots()
+    ax.set_ylabel("elektrische Einspeisung in kW")
+    ax.set_xlabel("Zeitschritte")
+
+    pv = network.generators[network.generators.carrier == "PV"]
+    ax.plot(
+        (
+            network.generators_t.p[pv.index]
+            .iloc[snapshots[0] : snapshots[1]]
+            .resample("5H")
+            .mean()
+        )
+        * 1000,
+        label=pv.index,
+    )
+    ax.plot(
+        abs(
+            (network.storage_units_t.p[network.storage_units_t.p < 0].fillna(0))
+            .iloc[snapshots[0] : snapshots[1]]
+            .resample("5H")
+            .mean()
+            * 1000
+        ),
+        label="BSp",
+    )
+
+    fig.legend(loc="upper right")
+
+
+# Wärmeerzeugung
+
+
+def heat_gen(network, snapshots=[0, 8759]):
+    fig, ax = plt.subplots()
+    ax.set_ylabel("Wärmeerzeugung in MW")
+    ax.set_xlabel("Zeitschritte")
+
+    ax.plot(
+        network.generators_t.p["SpK"]
+        .iloc[snapshots[0] : snapshots[1]]
+        .resample("5H")
+        .mean(),
+        label="SpK",
+    )
+    ax.plot(
+        abs(network.links_t.p1["KWK1_W"])
+        .iloc[snapshots[0] : snapshots[1]]
+        .resample("5H")
+        .mean(),
+        label="KWK1_W",
+    )
+    ax.plot(
+        abs(network.links_t.p1["KWK2_W"])
+        .iloc[snapshots[0] : snapshots[1]]
+        .resample("5H")
+        .mean(),
+        label="KWK2_W",
+    )
+    ax.plot(
+        abs(network.links_t.p1["KWK3_W"])
+        .iloc[snapshots[0] : snapshots[1]]
+        .resample("5H")
+        .mean(),
+        label="KWK3_W",
+    )
+
+    fig.legend(loc="upper right")
 
 
 # Nutzung des Wärmespeichers
 
-def heat_store_usage(network, snapshots=[0,8759]):
-    network.stores_t.e["WSp"].iloc[snapshots[0]:snapshots[1]].resample("5H").mean().plot()
+
+def heat_store_usage(network, snapshots=[0, 8759]):
+    fig, ax = plt.subplots()
+    ax.set_ylabel("Ladezustand des Wärmespeichers in MWh")
+    ax.set_xlabel("Zeitschritte")
+
+    ax.plot(
+        network.stores_t.e["WSp"]
+        .iloc[snapshots[0] : snapshots[1]]
+        .resample("5H")
+        .mean(),
+        label="WSp",
+    )
+
+    fig.legend(loc="upper right")
 
 
-def heat_gen_store_usage(network, snapshots=[0,8759]):
-    network.generators_t.p["SpK"].iloc[snapshots[0]:snapshots[1]].resample("5H").mean().plot(label="SpK", legend=True)
+def heat_gen_store_usage(network, snapshots=[0, 8759]):
+    fig, ax = plt.subplots()
+    ax.set_ylabel("Wärmeeinspeisung in MW")
+    ax.set_xlabel("Zeitschritte")
 
-    abs(network.links_t.p1["KWK1_W"]).iloc[snapshots[0]:snapshots[1]].resample("5H").mean().plot(label="KWK1_W", legend=True)
-    abs(network.links_t.p1["KWK2_W"]).iloc[snapshots[0]:snapshots[1]].resample("5H").mean().plot(label="KWK2_W", legend=True)
-    abs(network.links_t.p1["KWK3_W"]).iloc[snapshots[0]:snapshots[1]].resample("5H").mean().plot(label="KWK3_W", legend=True)
-    
-    network.links_t.p0["W_entladen"].iloc[snapshots[0]:snapshots[1]].resample("5H").mean().plot(label="WSp", legend=True)
+    ax.plot(
+        network.generators_t.p["SpK"]
+        .iloc[snapshots[0] : snapshots[1]]
+        .resample("5H")
+        .mean(),
+        label="SpK",
+    )
+    ax.plot(
+        abs(network.links_t.p1["KWK1_W"])
+        .iloc[snapshots[0] : snapshots[1]]
+        .resample("5H")
+        .mean(),
+        label="KWK1_W",
+    )
+    ax.plot(
+        abs(network.links_t.p1["KWK2_W"])
+        .iloc[snapshots[0] : snapshots[1]]
+        .resample("5H")
+        .mean(),
+        label="KWK2_W",
+    )
+    ax.plot(
+        abs(network.links_t.p1["KWK3_W"])
+        .iloc[snapshots[0] : snapshots[1]]
+        .resample("5H")
+        .mean(),
+        label="KWK3_W",
+    )
+    ax.plot(
+        network.links_t.p0["W_entladen"]
+        .iloc[snapshots[0] : snapshots[1]]
+        .resample("5H")
+        .mean(),
+        label="WSp",
+    )
+
+    fig.legend(loc="upper right")
 
 
 # KWKs und BGA
 
 
-def gas_gen_store(network):
-    gas = pd.DataFrame(
-        columns=[
-            "BGA1 - Erzeugung",
-            "BGA1 - Speicher",
-            "BGA2 - Erzeugung",
-            "BGA2 - Speicher",
-        ],
-        index=network.generators_t.p.index[0::5],
+def gas_gen_store(network, snapshots=[0, 8759]):
+    fig, ax = plt.subplots()
+    ax.set_ylabel("Gasverfügbarkeit")
+    ax.set_xlabel("Zeitschritte")
+
+    ax.plot(
+        network.generators_t.p["BGA1"]
+        .iloc[snapshots[0] : snapshots[1]]
+        .resample("5H")
+        .mean(),
+        label="BGA1 - Erzeugung in MW",
+    )
+    ax.plot(
+        network.generators_t.p["BGA2"]
+        .iloc[snapshots[0] : snapshots[1]]
+        .resample("5H")
+        .mean(),
+        label="BGA2 - Erzeugung in MW",
+    )
+    ax.plot(
+        network.stores_t.e["GSp1"]
+        .iloc[snapshots[0] : snapshots[1]]
+        .resample("5H")
+        .mean(),
+        label="BGA1 - Speicherfüllstand in MWh",
+    )
+    ax.plot(
+        network.stores_t.e["GSp2"]
+        .iloc[snapshots[0] : snapshots[1]]
+        .resample("5H")
+        .mean(),
+        label="BGA2 - Speicherfüllstand in MWh",
     )
 
-    gas["BGA1 - Erzeugung"] = network.generators_t.p["BGA1"].resample("5H").mean()
-
-    gas["BGA2 - Erzeugung"] = network.generators_t.p["BGA2"].resample("5H").mean()
-
-    gas["BGA1 - Speicher"] = network.stores_t.e["GSp1"].resample("5H").mean()
-
-    gas["BGA2 - Speicher"] = network.stores_t.e["GSp2"].resample("5H").mean()
-
-    gas.plot()
+    fig.legend(loc="upper right")
 
 
-def gas_gen_usage(network):
-    gas = pd.DataFrame(
-        columns=[
-            "Anlage 1: KWK1",
-            "Anlage 1: KWK2",
-            "Anlage 2: KWK3",
-            "Anlage 2: Sat-KWK",
-            "Gasverfügbarkeit Anlage 1",
-            "Gasverfügbarkeit Anlage 2",
-        ],
-        index=network.links_t.p0.index[0::5],
+def gas_gen_usage(network, snapshots=[0, 8759]):
+    fig, ax = plt.subplots()
+    ax.set_ylabel("Gasverfügbarkeit und Gasnutzung")
+    ax.set_xlabel("Zeitschritte")
+
+    ax.plot(
+        (
+            network.links_t.p0["KWK1_AC"].iloc[snapshots[0] : snapshots[1]]
+            + network.links_t.p0["KWK1_W"].iloc[snapshots[0] : snapshots[1]]
+        )
+        .resample("5H")
+        .mean(),
+        label="KWK1 - Gasnutzung in MW",
+    )
+    ax.plot(
+        (
+            network.links_t.p0["KWK2_AC"].iloc[snapshots[0] : snapshots[1]]
+            + network.links_t.p0["KWK3_W"].iloc[snapshots[0] : snapshots[1]]
+        )
+        .resample("5H")
+        .mean(),
+        label="KWK2 - Gasnutzung in MW",
+    )
+    ax.plot(
+        (
+            network.links_t.p0["KWK3_AC"].iloc[snapshots[0] : snapshots[1]]
+            + network.links_t.p0["KWK2_W"].iloc[snapshots[0] : snapshots[1]]
+        )
+        .resample("5H")
+        .mean(),
+        label="KWK3 - Gasnutzung in MW",
+    )
+    ax.plot(
+        network.loads_t.p["SAT"]
+        .iloc[snapshots[0] : snapshots[1]]
+        .resample("5H")
+        .mean(),
+        label="SAT-KWK - Gasnutzung in MW",
+    )
+    ax.plot(
+        (
+            network.generators_t.p["BGA1"].iloc[snapshots[0] : snapshots[1]]
+            + network.stores_t.e["GSp1"].iloc[snapshots[0] : snapshots[1]]
+        )
+        .resample("5H")
+        .mean(),
+        label="Anlage 1 - Gasverfügbarkeit in MWh",
+    )
+    ax.plot(
+        (
+            network.generators_t.p["BGA2"].iloc[snapshots[0] : snapshots[1]]
+            + network.stores_t.e["GSp2"].iloc[snapshots[0] : snapshots[1]]
+        )
+        .resample("5H")
+        .mean(),
+        label="Anlage 2 - Gasverfügbarkeit in MWh",
     )
 
-    gas["Anlage 1: KWK1"] = network.links_t.p0["KWK1_AC"] + network.links_t.p0["KWK1_W"].resample("5H").mean()
-
-    gas["Anlage 1: KWK2"] = network.links_t.p0["KWK2_AC"] + network.links_t.p0["KWK2_W"].resample("5H").mean()
-
-    gas["Anlage 2: KWK3"] = network.links_t.p0["KWK3_AC"] + network.links_t.p0["KWK3_W"].resample("5H").mean()
-
-    gas["Anlage 2: Sat-KWK"] = network.loads_t.p["SAT"].resample("5H").mean()
-
-    gas["Gasverfügbarkeit Anlage 1"] = (
-        network.generators_t.p["BGA1"] + network.stores_t.e["GSp1"]
-    ).resample("5H").mean()
-
-    gas["Gasverfügbarkeit Anlage 2"] = (
-        network.generators_t.p["BGA2"] + network.stores_t.e["GSp2"]
-    ).resample("5H").mean()
-
-    gas.plot()
+    fig.legend(loc="upper right")
 
 
-def kwk_gas_usage(network):
-    gas = pd.DataFrame(columns=["KWK1", "KWK2", "KWK3"], index=network.links_t.p0.index[0::5])
+def kwk_gas_usage(network, snapshots=[0, 8759]):
+    fig, ax = plt.subplots()
+    ax.set_ylabel("Gasnutzung in MW")
+    ax.set_xlabel("Zeitschritte")
 
-    gas["KWK1"] = network.links_t.p0["KWK1_AC"] + network.links_t.p0["KWK1_W"].resample("5H").mean()
-
-    gas["KWK2"] = network.links_t.p0["KWK2_AC"] + network.links_t.p0["KWK2_W"].resample("5H").mean()
-
-    gas["KWK3"] = network.links_t.p0["KWK3_AC"] + network.links_t.p0["KWK3_W"].resample("5H").mean()
-
-    gas.plot()
-
-
-def kwk_electrical_output(network):
-    gas = pd.DataFrame(columns=["KWK1", "KWK2", "KWK3"], index=network.links_t.p0.index[0::5])
-
-    gas["KWK1"] = abs(network.links_t.p1["KWK1_AC"]).resample("5H").mean()
-
-    gas["KWK2"] = abs(network.links_t.p1["KWK2_AC"]).resample("5H").mean()
-
-    gas["KWK3"] = abs(network.links_t.p1["KWK3_AC"]).resample("5H").mean()
-
-    gas.plot()
-
-
-def kwk_heat_output(network):
-    gas = pd.DataFrame(columns=["KWK1", "KWK2", "KWK3"], index=network.links_t.p0.index[0::5])
-
-    gas["KWK1"] = abs(network.links_t.p1["KWK1_W"]).resample("5H").mean()
-
-    gas["KWK2"] = abs(network.links_t.p1["KWK2_W"]).resample("5H").mean()
-
-    gas["KWK3"] = abs(network.links_t.p1["KWK3_W"]).resample("5H").mean()
-
-    gas.plot()
-
-
-def kwk_output(network):
-    gas = pd.DataFrame(
-        columns=[
-            "KWK1-Strom",
-            "KWK1-Wärme",
-            "KWK2-Strom",
-            "KWK2-Wärme",
-            "KWK3-Strom",
-            "KWK3-Wärme",
-        ],
-        index=network.links_t.p0.index[0::5],
+    ax.plot(
+        (
+            network.links_t.p0["KWK1_AC"].iloc[snapshots[0] : snapshots[1]]
+            + network.links_t.p0["KWK1_W"].iloc[snapshots[0] : snapshots[1]]
+        )
+        .resample("5H")
+        .mean(),
+        label="KWK1",
+    )
+    ax.plot(
+        (
+            network.links_t.p0["KWK2_AC"].iloc[snapshots[0] : snapshots[1]]
+            + network.links_t.p0["KWK3_W"].iloc[snapshots[0] : snapshots[1]]
+        )
+        .resample("5H")
+        .mean(),
+        label="KWK2",
+    )
+    ax.plot(
+        (
+            network.links_t.p0["KWK3_AC"].iloc[snapshots[0] : snapshots[1]]
+            + network.links_t.p0["KWK2_W"].iloc[snapshots[0] : snapshots[1]]
+        )
+        .resample("5H")
+        .mean(),
+        label="KWK3",
+    )
+    ax.plot(
+        network.loads_t.p["SAT"]
+        .iloc[snapshots[0] : snapshots[1]]
+        .resample("5H")
+        .mean(),
+        label="SAT-KWK",
     )
 
-    # abs(network.links_t.p1[network.links[network.links.index.str.startswith("KWK1")].index]).plot()
+    fig.legend(loc="upper right")
 
-    gas["KWK1-Strom"] = abs(network.links_t.p1["KWK1_AC"]).resample("5H").mean()
 
-    gas["KWK2-Strom"] = abs(network.links_t.p1["KWK2_AC"]).resample("5H").mean()
+def kwk_electrical_output(network, snapshots=[0, 8759]):
+    fig, ax = plt.subplots()
+    ax.set_ylabel("Stromerzeugung in kW")
+    ax.set_xlabel("Zeitschritte")
 
-    gas["KWK3-Strom"] = abs(network.links_t.p1["KWK3_AC"]).resample("5H").mean()
+    ax.plot(
+        abs(network.links_t.p1["KWK1_AC"])
+        .iloc[snapshots[0] : snapshots[1]]
+        .resample("5H")
+        .mean()
+        * 1000,
+        label="KWK1",
+    )
+    ax.plot(
+        abs(network.links_t.p1["KWK2_AC"])
+        .iloc[snapshots[0] : snapshots[1]]
+        .resample("5H")
+        .mean()
+        * 1000,
+        label="KWK2",
+    )
+    ax.plot(
+        abs(network.links_t.p1["KWK3_AC"])
+        .iloc[snapshots[0] : snapshots[1]]
+        .resample("5H")
+        .mean()
+        * 1000,
+        label="KWK3",
+    )
 
-    gas["KWK1-Wärme"] = abs(network.links_t.p1["KWK1_W"]).resample("5H").mean()
+    fig.legend(loc="upper right")
 
-    gas["KWK2-Wärme"] = abs(network.links_t.p1["KWK2_W"]).resample("5H").mean()
 
-    gas["KWK3-Wärme"] = abs(network.links_t.p1["KWK3_W"]).resample("5H").mean()
+def kwk_heat_output(network, snapshots=[0, 8759]):
+    fig, ax = plt.subplots()
+    ax.set_ylabel("Wärmeerzeugung in kW")
+    ax.set_xlabel("Zeitschritte")
 
-    gas.plot()
+    ax.plot(
+        abs(network.links_t.p1["KWK1_W"])
+        .iloc[snapshots[0] : snapshots[1]]
+        .resample("5H")
+        .mean()
+        * 1000,
+        label="KWK1",
+    )
+    ax.plot(
+        abs(network.links_t.p1["KWK2_W"])
+        .iloc[snapshots[0] : snapshots[1]]
+        .resample("5H")
+        .mean()
+        * 1000,
+        label="KWK2",
+    )
+    ax.plot(
+        abs(network.links_t.p1["KWK3_W"])
+        .iloc[snapshots[0] : snapshots[1]]
+        .resample("5H")
+        .mean()
+        * 1000,
+        label="KWK3",
+    )
+
+    fig.legend(loc="upper right")
+
+
+def kwk_output(network, snapshots=[0, 8759]):
+    fig, ax = plt.subplots()
+    ax.set_ylabel("Strom- und Wärmeerzeugung in kW")
+    ax.set_xlabel("Zeitschritte")
+
+    ax.plot(
+        abs(network.links_t.p1["KWK1_AC"])
+        .iloc[snapshots[0] : snapshots[1]]
+        .resample("5H")
+        .mean()
+        * 1000,
+        label="KWK1 - Strom",
+    )
+    ax.plot(
+        abs(network.links_t.p1["KWK2_AC"])
+        .iloc[snapshots[0] : snapshots[1]]
+        .resample("5H")
+        .mean()
+        * 1000,
+        label="KWK2 - Strom",
+    )
+    ax.plot(
+        abs(network.links_t.p1["KWK3_AC"])
+        .iloc[snapshots[0] : snapshots[1]]
+        .resample("5H")
+        .mean()
+        * 1000,
+        label="KWK3 - Strom",
+    )
+    ax.plot(
+        abs(network.links_t.p1["KWK1_W"])
+        .iloc[snapshots[0] : snapshots[1]]
+        .resample("5H")
+        .mean()
+        * 1000,
+        label="KWK1 - Wärme",
+    )
+    ax.plot(
+        abs(network.links_t.p1["KWK2_W"])
+        .iloc[snapshots[0] : snapshots[1]]
+        .resample("5H")
+        .mean()
+        * 1000,
+        label="KWK2 - Wärme",
+    )
+    ax.plot(
+        abs(network.links_t.p1["KWK3_W"])
+        .iloc[snapshots[0] : snapshots[1]]
+        .resample("5H")
+        .mean()
+        * 1000,
+        label="KWK3 - Wärme",
+    )
+
+    fig.legend(loc="upper right")
