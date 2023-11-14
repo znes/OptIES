@@ -65,9 +65,9 @@ Die Abbildung des regionalen Energiesystems erfolgt anhand des folgenden Konzept
 Beispielhafte Ergebnisse
 ========================
 
-.. image:: img/Beispiel_Ergebnis
+.. image:: img/Beispiel_Ergebnis.png
   :width: 800
-  :alt: Beispielhaftes Ergebnis
+  :alt: Beispielhafte Ergebnisse
 
 Copyleft
 ========
