@@ -153,7 +153,7 @@ def calc_results(network):
             "annualisierte Investkosten PV-Anlagen",
             "annualisierte Investkosten Batteriespeicher",
             "annualisierte Investkosten Wärmespeicher",
-            "annualisierte Investkosten Biogasspeicher",
+            #"annualisierte Investkosten Biogasspeicher",
             "annualisierte Investkosten diverser Link-Komponenten",  # Links Wärmespeicher, Links Abwärme und Netzanschluss
             "Ausbau: ",
             "rel. Netzausbau",
@@ -204,9 +204,6 @@ def calc_results(network):
     results.Wert["Objective"] = network.objective
     results.Einheit["Objective"] = "(€)"
 
-    # TODO: post-ex Kostenberechnung für Spitzenlastkessel ?
-    # da marginal_costs küsntlich erhöht um Einsatz zu verringern
-
     # Systemkosten
 
     invest = calc_investment_cost(network)
@@ -231,7 +228,7 @@ def calc_results(network):
 
     results.Wert["annualisierte Investkosten Wärmespeicher"] = invest[2][1]
 
-    results.Wert["annualisierte Investkosten Biogasspeicher"] = invest[2][2]
+    #results.Wert["annualisierte Investkosten Biogasspeicher"] = invest[2][2]
 
     results.Wert["annualisierte Investkosten diverser Link-Komponenten"] = invest[1]
 
