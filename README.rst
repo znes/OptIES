@@ -62,12 +62,24 @@ Die Abbildung des regionalen Energiesystems erfolgt anhand des folgenden Konzept
   :width: 800
   :alt: Verwendetes Modellkonzept
 
-Beispielhafte Ergebnisse
-========================
+Beispielhafte Inputdaten und Ergebnisse
+=======================================
+
+.. image:: img/Beispiel_Input.png
+  :width: 800
+  :alt: Beispielhafte Inputs - 1
 
 .. image:: img/Beispiel_Ergebnis.png
   :width: 800
-  :alt: Beispielhafte Ergebnisse
+  :alt: Beispielhafte Ergebnisse - 1
+  
+.. image:: img/Beispiel_Ergebnis2.png
+  :width: 800
+  :alt: Beispielhafte Ergebnisse - 2
+  
+  .. image:: img/Beispiel_Ergebnis3.png
+  :width: 800
+  :alt: Beispielhafte Ergebnisse - 3
 
 Copyleft
 ========
