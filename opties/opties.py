@@ -26,6 +26,7 @@ import pypsa
 from data import import_data, import_timeseries, create_pypsa_network
 from optimization import Constraints, optimization
 from results import calc_results
+from plots import *
 
 __copyright__ = (
     "Europa-Universität Flensburg, Centre for Sustainable Energy Systems, "
