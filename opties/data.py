@@ -237,6 +237,7 @@ def create_pypsa_network(
             bus1=link.bus1,
             p_nom_extendable=link.p_nom_extendable,
             p_nom=link.p_nom,
+            p_nom_min=link.p_nom_min,
             efficiency=link.efficiency,
             marginal_cost=link.marginal_cost,
             capital_cost=link.capital_cost,
