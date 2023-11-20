@@ -155,7 +155,7 @@ def grid_usage(network, snapshots=[0, 8759], hour="5H"):
 def el_gen_ies(network, snapshots=[0, 8759], hour="5H"):
     fig, ax = plt.subplots()
 
-    ax.set_ylabel("Einspeisung in kW")
+    ax.set_ylabel("elektrische Einspeisung in kW")
     ax.set_xlabel("Zeitschritte")
 
     ax.plot(
