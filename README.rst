@@ -68,18 +68,19 @@ Beispielhafte Inputdaten und Ergebnisse
 .. image:: img/Beispiel_Input.png
   :width: 800
   :alt: Beispielhafte Inputs - 1
+  
+  Beispiel für Inputdaten: Synthetische elektrische Lastzeitreihen nach [Buettner2022]_
 
 .. image:: img/Beispiel_Ergebnis.png
   :width: 800
-  :alt: Beispielhafte Ergebnisse - 1
+  :alt: Beispielhafte Ergebnisse 1
   
-.. image:: img/Beispiel_Ergebnis2.png
-  :width: 800
-  :alt: Beispielhafte Ergebnisse - 2
-  
-  .. image:: img/Beispiel_Ergebnis3.png
-  :width: 800
-  :alt: Beispielhafte Ergebnisse - 3
+  Beispiel für Optimierungsergebnis: Elektrische Versorgung des IES Dörpum
+
+Literatur
+=========
+
+.. [Buettner2022] C. Büttner, J. Amme, J. Endres, A. Malla, B. Schachler, I. Cußmann, Open modeling of electricity and heat demand curves for all residential buildings in Germany, Energy Informatics 5 (1) (2022) 21. doi:10.1186/s42162-022-00201-y. URL https://doi.org/10.1186/s42162-022-00201-y
 
 Copyleft
 ========
