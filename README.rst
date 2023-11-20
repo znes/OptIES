@@ -58,20 +58,21 @@ Modellkonzept
 
 Die Abbildung des regionalen Energiesystems erfolgt anhand des folgenden Konzepts:
 
-.. image:: img/Modellkonzept.png
+.. figure:: img/Modellkonzept.png
+  :name: modellkonzept
   :width: 800
-  
-  test
 
 Beispielhafte Inputdaten und Ergebnisse
 =======================================
 
-.. image:: img/Beispiel_Input.png
+.. figure:: img/Beispiel_Input.png
+  :name: bsp_input
   :width: 800
   
   Beispiel für Inputdaten: Synthetische elektrische Lastzeitreihen nach [Buettner2022]_
 
-.. image:: img/Beispiel_Ergebnis.png
+.. figure:: img/Beispiel_Ergebnis.png
+  :name: bsp_output
   :width: 800
   
   Beispiel für Optimierungsergebnis: Elektrische Versorgung des IES Dörpum
