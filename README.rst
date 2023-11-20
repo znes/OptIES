@@ -68,13 +68,15 @@ Beispielhafte Inputdaten und Ergebnisse
 .. figure:: img/Beispiel_Input.png
   :name: bsp_input
   :width: 800
-  
+
+.. class:: center
   Beispiel für Inputdaten: Synthetische elektrische Lastzeitreihen nach [Buettner2022]_
 
 .. figure:: img/Beispiel_Ergebnis.png
   :name: bsp_output
   :width: 800
   
+.. class:: center  
   Beispiel für Optimierungsergebnis: Elektrische Versorgung des IES Dörpum
 
 Literatur
