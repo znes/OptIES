@@ -39,8 +39,9 @@ __author__ = "KathiEsterl"
 
 def import_data(path="data/"):
     buses = pd.read_csv(path + "buses.csv").set_index("name")
-    buses["geometry"] = buses["geometry"].apply(shapely.wkt.loads)
-    buses = gpd.GeoDataFrame(buses, geometry="geometry")
+    if "geometry" in buses.columns:
+        buses["geometry"] = buses["geometry"].apply(shapely.wkt.loads)
+        buses = gpd.GeoDataFrame(buses, geometry="geometry")
 
     lines = pd.read_csv(path + "lines.csv").set_index("id")
     generators = pd.read_csv(path + "generators.csv").set_index("name")
@@ -123,17 +124,29 @@ def create_pypsa_network(
         )
 
     # Buses
+    
+    if 'geometry' in buses.columns:
 
-    for i in range(0, len(buses)):
-        bus = buses.iloc[i]
-        network.add(
-            "Bus",
-            name=bus.name,
-            carrier=bus.carrier,
-            v_nom=bus.v_nom,
-            x=shapely.get_x(bus.geometry),
-            y=shapely.get_y(bus.geometry),
-        )
+        for i in range(0, len(buses)):
+            bus = buses.iloc[i]
+            network.add(
+                "Bus",
+                name=bus.name,
+                carrier=bus.carrier,
+                v_nom=bus.v_nom,
+                x=shapely.get_x(bus.geometry),
+                y=shapely.get_y(bus.geometry),
+            )
+    else:
+        
+        for i in range(0, len(buses)):
+            bus = buses.iloc[i]
+            network.add(
+                "Bus",
+                name=bus.name,
+                carrier=bus.carrier,
+                v_nom=bus.v_nom,
+            )
 
     # Lines
 
