@@ -22,6 +22,7 @@ This file contains the functions to examine the optimization results.
 """
 
 import pandas as pd
+import numpy as np
 
 __copyright__ = (
     "Europa-Universität Flensburg, Centre for Sustainable Energy Systems, "
@@ -101,23 +102,31 @@ def calc_investment_cost(network):
 
 
 def calc_marginal_cost(network):
+    
+    if network.snapshots[1]-network.snapshots[0] == pd.Timedelta(minutes=5):
+        res = 12
+    elif network.snapshots[1]-network.snapshots[0] == pd.Timedelta(minutes=15):
+        res = 4
+    else:
+        res=1
+    
     gen = (
-        network.generators_t.p.mul(network.snapshot_weightings.objective, axis=0)
-        .sum(axis=0)
+        network.generators_t.p.groupby(np.arange(len(network.snapshots))//res).mean()
+        .sum()
         .mul(network.generators.marginal_cost)
         .sum()
     )
 
     link = (
         abs(network.links_t.p0)
-        .mul(network.snapshot_weightings.objective, axis=0)
+        .groupby(np.arange(len(network.snapshots))//res).mean()
         .sum(axis=0)
         .mul(network.links.marginal_cost)
         .sum()
     )
 
     stor = (
-        network.storage_units_t.p.mul(network.snapshot_weightings.objective, axis=0)
+        network.storage_units_t.p.groupby(np.arange(len(network.snapshots))//res).mean()
         .sum(axis=0)
         .mul(network.storage_units.marginal_cost)
         .sum()
@@ -171,6 +180,8 @@ def calc_results(network):
             "Biogaserzeugung",
             "elektrischer Eigenverbrauch BGA",
             "elektrische Last IES",
+            "- Anschlussnehmer*innen",
+            "- Ladesäulen E-Mobilität",
             "Erzeugung aus PV-Anlagen",
             "Erzeugung durch BHKW - Strom",
             "Netzbezug",
@@ -194,6 +205,8 @@ def calc_results(network):
     results.Einheit[results.index.str.contains("Last")] = "MWh"
     results.Einheit[results.index.str.contains("last")] = "MWh"
     results.Einheit[results.index.str.contains("verbrauch")] = "MWh"
+    results.Einheit[results.index.str.contains("innen")] = "MWh"
+    results.Einheit[results.index.str.contains("E-Mobilität")] = "MWh"
     results.Einheit[results.index.str.contains("restlich")] = "MWh"
     results.Einheit[results.index.str.contains("Erzeugung")] = "MWh"
     results.Einheit[results.index.str.contains("erzeugung")] = "MWh"
@@ -203,6 +216,13 @@ def calc_results(network):
 
     results.Wert["Objective"] = network.objective
     results.Einheit["Objective"] = "(€)"
+    
+    if network.snapshots[1]-network.snapshots[0] == pd.Timedelta(minutes=5):
+        res = 12
+    elif network.snapshots[1]-network.snapshots[0] == pd.Timedelta(minutes=15):
+        res = 4
+    else:
+        res=1
 
     # Systemkosten
 
@@ -236,30 +256,24 @@ def calc_results(network):
 
     results.Wert["annualisierte marginale Kosten"] = marg
 
-    results.Wert["Erträge aus Trocknungsanlage"] = network.links_t.p0["TA"].mul(
-        network.snapshot_weightings.objective, axis=0
-    ).sum() * (network.links.loc["TA"].marginal_cost)
+    results.Wert["Erträge aus Trocknungsanlage"] = network.links_t.p0["TA"].groupby(np.arange(len(network.snapshots))//res).mean().sum() * (network.links.loc["TA"].marginal_cost)
 
-    results.Wert["Erträge aus Netzeinspeisung"] = network.links_t.p0["NA_Sp"].mul(
-        network.snapshot_weightings.objective, axis=0
-    ).sum() * (network.links.loc["NA_Sp"].marginal_cost)
+    results.Wert["Erträge aus Netzeinspeisung"] = network.links_t.p0["NA_Sp"].groupby(np.arange(len(network.snapshots))//res).mean().sum() * (network.links.loc["NA_Sp"].marginal_cost)
 
-    results.Wert["Kosten aus Netzbezug"] = network.generators_t.p["NeAn"].mul(
-        network.snapshot_weightings.objective, axis=0
-    ).sum() * (network.generators.loc["NeAn"].marginal_cost)
+    results.Wert["Kosten aus Netzbezug"] = network.generators_t.p["NeAn"].groupby(np.arange(len(network.snapshots))//res).mean().sum() * (network.generators.loc["NeAn"].marginal_cost)
 
     results.Wert["Kosten aus Betrieb der BHKWs (inklusive Biogas)"] = (
         network.generators_t.p["BGA1"]
-        .mul(network.snapshot_weightings.objective, axis=0)
+        .groupby(np.arange(len(network.snapshots))//res).mean()
         .sum()
         * (network.generators.loc["BGA1"].marginal_cost)
         + network.generators_t.p["BGA2"]
-        .mul(network.snapshot_weightings.objective, axis=0)
+        .groupby(np.arange(len(network.snapshots))//res).mean()
         .sum()
         * (network.generators.loc["BGA2"].marginal_cost)
         + (
             network.links_t.p0[network.links[network.links.carrier == "KWK_AC"].index]
-            .mul(network.snapshot_weightings.objective, axis=0)
+            .groupby(np.arange(len(network.snapshots))//res).mean()
             .sum()
             * (network.links[network.links.carrier == "KWK_AC"].marginal_cost)
         ).sum()
@@ -310,52 +324,61 @@ def calc_results(network):
     # Systemversorgung
 
     results.Wert["elektrische Last IES"] = (
-        network.loads_t.p[network.loads[network.loads.carrier == "AC"].index]
+        network.loads_t.p_set[network.loads[network.loads.carrier == "AC"].index].groupby(np.arange(len(network.snapshots))//res).mean()
         .sum()
         .sum()
-        - network.loads_t.p["EV_el"].sum()
+        - network.loads_t.p_set["EV_el"].groupby(np.arange(len(network.snapshots))//res).mean().sum()
     )
+    
+    results.Wert["- Anschlussnehmer*innen"] = (
+        network.loads_t.p_set[network.loads[network.loads.carrier == "AC"].index].groupby(np.arange(len(network.snapshots))//res).mean()
+        .sum()
+        .sum()
+        - network.loads_t.p_set["EV_el"].groupby(np.arange(len(network.snapshots))//res).mean().sum() - network.loads_t.p_set["LS1"].groupby(np.arange(len(network.snapshots))//res).mean().sum() - network.loads_t.p_set["LS2"].groupby(np.arange(len(network.snapshots))//res).mean().sum()
+    )
+    
+    results.Wert["- Ladesäulen E-Mobilität"] = network.loads_t.p_set["LS1"].groupby(np.arange(len(network.snapshots))//res).mean().sum() + network.loads_t.p_set["LS2"].groupby(np.arange(len(network.snapshots))//res).mean().sum()
 
-    results.Wert["elektrischer Eigenverbrauch BGA"] = network.loads_t.p["EV_el"].sum()
+    results.Wert["elektrischer Eigenverbrauch BGA"] = network.loads_t.p_set["EV_el"].groupby(np.arange(len(network.snapshots))//res).mean().sum()
 
-    results.Wert["Wärmelast (Wärmenetz)"] = network.loads_t.p["WL"].sum().sum()
+    results.Wert["Wärmelast (Wärmenetz)"] = network.loads_t.p_set["WL"].groupby(np.arange(len(network.snapshots))//res).mean().sum().sum()
 
-    results.Wert["Eigenverbrauch"] = network.loads_t.p["EV_W"].sum()
+    results.Wert["Eigenverbrauch"] = network.loads_t.p_set["EV_W"].groupby(np.arange(len(network.snapshots))//res).mean().sum()
 
     results.Wert["Erzeugung aus PV-Anlagen"] = (
         network.generators_t.p[
             network.generators[network.generators.carrier == "PV"].index
-        ]
+        ].groupby(np.arange(len(network.snapshots))//res).mean()
         .sum()
         .sum()
     )
 
     results.Wert["Erzeugung durch BHKW - Strom"] = abs(
-        network.links_t.p1[network.links[network.links.carrier == "KWK_AC"].index]
+        network.links_t.p1[network.links[network.links.carrier == "KWK_AC"].index].groupby(np.arange(len(network.snapshots))//res).mean()
         .sum()
         .sum()
     )
 
     results.Wert["Erzeugung durch BHKW - Wärme"] = abs(
-        network.links_t.p1[network.links[network.links.carrier == "KWK_heat"].index]
+        network.links_t.p1[network.links[network.links.carrier == "KWK_heat"].index].groupby(np.arange(len(network.snapshots))//res).mean()
         .sum()
         .sum()
     )
 
     results.Wert["Erzeugung durch Spitzenlastkessel"] = network.generators_t.p[
         "SpK"
-    ].sum()
+    ].groupby(np.arange(len(network.snapshots))//res).mean().sum()
 
-    results.Wert["Last der Trocknungsanlage"] = network.links_t.p0["TA"].sum()
+    results.Wert["Last der Trocknungsanlage"] = network.links_t.p0["TA"].groupby(np.arange(len(network.snapshots))//res).mean().sum()
 
-    results.Wert["restliche Abwärme"] = network.links_t.p0["Abw"].sum()
+    results.Wert["restliche Abwärme"] = network.links_t.p0["Abw"].groupby(np.arange(len(network.snapshots))//res).mean().sum()
 
-    results.Wert["Netzbezug"] = network.generators_t.p["NeAn"].sum()
+    results.Wert["Netzbezug"] = network.generators_t.p["NeAn"].groupby(np.arange(len(network.snapshots))//res).mean().sum()
 
-    results.Wert["Netzeinspeisung"] = network.links_t.p0["NA_Sp"].sum()
+    results.Wert["Netzeinspeisung"] = network.links_t.p0["NA_Sp"].groupby(np.arange(len(network.snapshots))//res).mean().sum()
 
     results.Wert["Biogaserzeugung"] = (
-        network.generators_t.p["BGA1"].sum() + network.generators_t.p["BGA2"].sum()
+        network.generators_t.p["BGA1"].groupby(np.arange(len(network.snapshots))//res).mean().sum() + network.generators_t.p["BGA2"].groupby(np.arange(len(network.snapshots))//res).mean().sum()
     )
 
     return results
