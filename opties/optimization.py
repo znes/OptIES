@@ -95,8 +95,8 @@ def run_lopf(network, args, extra_functionality):
     x = time.time()
 
     # snapshots
-    start = args["start_snapshot"] - 1
-    end = args["end_snapshot"]
+    start = args["start_hour"] - 1
+    end = args["end_hour"]
 
     network.lopf(
         snapshots=network.snapshots[start:end],
