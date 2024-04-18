@@ -51,7 +51,7 @@ Aufbau des Tools
 
 Das zentrale Skript dieses Tools bildet :code:`opties.py`, welches der Konfiguration und Ausführung der Berechnungen dient. :code:`data.py` beinhaltet die Funktionen zum Import der notwendigen Eingangsdaten und zum Erstellen eines entsprechenden *PyPSA Networks*. Funktionen innerhalb der Optimierung sowie speziell benötigte Nebenbedingungen sind in :code:`optimization.py` zu finden. :code:`results.py` und :code:`plots.py` halten Funktionalitäten zur Auswertung und grafischen Darstellung der Ergebnisse bereit. 
 
-Neben den beschriebenen Skripten werden Daten für die Durchführung von Optimierungsrechnungen des vorliegenden Systems benötigt. Eine Veröffentlichung geeigneter Inputdatensätze auf `zenodo <https://zenodo.org/>`_ ist in Arbeit. Diese Datensätze werden einerseits reale Messdaten und andererseits synthetisch generierte Daten enthalten. Letztere werden anhand der Messzeitreihen validiert, um sicherzustellen, dass sie möglichst realitätsnah sind. 
+Neben den beschriebenen Skripten werden Daten für die Durchführung von Optimierungsrechnungen des vorliegenden Systems benötigt. Die Inputdatensätze sind auf `zenodo <https://zenodo.org/>`_ veröffentlicht. Diese Datensätze enthalten einerseits reale Messdaten und andererseits synthetisch generierte Daten. Letztere werden anhand der Messzeitreihen validiert, um sicherzustellen, dass sie möglichst realitätsnah sind. 
 
 Modellkonzept
 =============
@@ -69,7 +69,7 @@ Beispielhafte Inputdaten und Ergebnisse
   :name: bsp_input
   :width: 800 
   
-  Beispiel für Inputdaten: Synthetische elektrische Lastzeitreihen nach [Buettner2022]_
+  Beispiel für Inputdaten: Synthetische elektrische Lastzeitreihen nach [Buettner2022]_ sowie gemessene elektrische Lastzeitreihen
   
 .. figure:: /img/Beispiel_Ergebnis.png
   :name: bsp_output
