@@ -68,7 +68,7 @@ def AC_load(network, snapshots=[0, 8759], hour="5H"):
     fig.legend(loc="upper right")
 
 
-def AN_load(network, snapshots=[0, 8759], hour="5H"):
+def AN_EV_load(network, snapshots=[0, 8759], hour="5H"):
     fig, ax = plt.subplots()
     ax.set_ylabel("elektrische Last in kW")
     ax.set_xlabel("Zeitschritte")
