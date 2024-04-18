@@ -23,7 +23,7 @@ This is the application file for the tool OptIES.
 
 import pypsa
 
-from data import import_data, import_timeseries, create_pypsa_network
+from data import import_data, import_timeseries, create_pypsa_network, adapt_settings
 from optimization import Constraints, optimization
 from results import calc_results
 from plots import *
@@ -38,9 +38,12 @@ __author__ = "KathiEsterl, MatthiasW, mohsenmansouri"
 
 args = {
     "path": "data/",
-    "use_real_data": False,
-    "start_snapshot": 1,  # comparison with real_data: 1081
-    "end_snapshot": 8760,  # comparison with real_data: 7451
+    "use_real_data": True, # if True, temporal resolution modifiable
+    "temporal_resolution": '15min', #  {'5min', '15min', 'hourly'}, for synth. only hourly
+    "start_hour": 1, 
+    "end_hour": 8760,
+    "flexible_components": {},# {'emob', 'dsm'}, # {emob, dsm, biogas-remuneration}, only hourly
+    "extendable_components": {}, # {el_lines, pv, battery, heat-store}
     "method": {
         "type": "lopf",
         "n_iter": 4,
@@ -61,11 +64,11 @@ args = {
 
 
 buses, lines, generators, storage_units, stores, links, loads = import_data(
-    args["path"]
+    args
 )
 
 el_loads, heat_load, gas_load, pv = import_timeseries(
-    args["path"] + "/timeseries/", args["use_real_data"]
+    args
 )
 
 network = create_pypsa_network(
@@ -80,8 +83,10 @@ network = create_pypsa_network(
     heat_load,
     gas_load,
     pv,
-    args["use_real_data"],
+    args,
 )
+
+network = adapt_settings(network, args)
 
 optimization(network, args)
 
