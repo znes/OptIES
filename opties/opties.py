@@ -38,12 +38,12 @@ __author__ = "KathiEsterl, MatthiasW, mohsenmansouri"
 
 args = {
     "path": "data/",
-    "use_real_data": False, # if True, temporal resolution modifiable
-    "temporal_resolution": 'hourly', #  {'5min', '15min', 'hourly'}, for synth. only hourly
-    "start_hour": 1, 
+    "use_real_data": False,  # if True, temporal resolution modifiable
+    "temporal_resolution": "hourly",  #  {'5min', '15min', 'hourly'}, for synth. only hourly
+    "start_hour": 1,
     "end_hour": 8760,
-    "flexible_components": {},# {'emob', 'dsm'}, # {emob, dsm, biogas-remuneration}, only hourly
-    "extendable_components": {}, # {'el_lines', 'pv', 'battery', 'heat-store'}
+    "flexible_components": {},  # {'emob', 'dsm'}, # {emob, dsm, biogas-remuneration}, only hourly
+    "extendable_components": {},  # {'el_lines', 'pv', 'battery', 'heat-store'}
     "method": {
         "type": "lopf",
         "n_iter": 4,
@@ -63,13 +63,9 @@ args = {
 }
 
 
-buses, lines, generators, storage_units, stores, links, loads = import_data(
-    args
-)
+buses, lines, generators, storage_units, stores, links, loads = import_data(args)
 
-el_loads, heat_load, gas_load, pv = import_timeseries(
-    args
-)
+el_loads, heat_load, gas_load, pv = import_timeseries(args)
 
 network = create_pypsa_network(
     buses,

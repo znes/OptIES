@@ -102,16 +102,16 @@ def calc_investment_cost(network):
 
 
 def calc_marginal_cost(network):
-    
-    if network.snapshots[1]-network.snapshots[0] == pd.Timedelta(minutes=5):
+    if network.snapshots[1] - network.snapshots[0] == pd.Timedelta(minutes=5):
         res = 12
-    elif network.snapshots[1]-network.snapshots[0] == pd.Timedelta(minutes=15):
+    elif network.snapshots[1] - network.snapshots[0] == pd.Timedelta(minutes=15):
         res = 4
     else:
-        res=1
-    
+        res = 1
+
     gen = (
-        network.generators_t.p.groupby(np.arange(len(network.snapshots))//res).mean()
+        network.generators_t.p.groupby(np.arange(len(network.snapshots)) // res)
+        .mean()
         .sum()
         .mul(network.generators.marginal_cost)
         .sum()
@@ -119,14 +119,16 @@ def calc_marginal_cost(network):
 
     link = (
         abs(network.links_t.p0)
-        .groupby(np.arange(len(network.snapshots))//res).mean()
+        .groupby(np.arange(len(network.snapshots)) // res)
+        .mean()
         .sum(axis=0)
         .mul(network.links.marginal_cost)
         .sum()
     )
 
     stor = (
-        network.storage_units_t.p.groupby(np.arange(len(network.snapshots))//res).mean()
+        network.storage_units_t.p.groupby(np.arange(len(network.snapshots)) // res)
+        .mean()
         .sum(axis=0)
         .mul(network.storage_units.marginal_cost)
         .sum()
@@ -147,16 +149,38 @@ def calc_network_expansion(network):
 
     return lines, dc_links
 
+
 def dsm_potential_usage(network):
-    pot = (network.links[network.links.index.str.contains('dsm')].p_nom * network.links_t.p_max_pu[network.links[network.links.index.str.contains('dsm')].index].mean()).sum()*1000
-    use = (network.links[network.links.index.str.contains('dsm')].p_nom * network.links_t.p0[network.links[network.links.index.str.contains('dsm')].index]).sum().sum()*1000
-    
+    pot = (
+        network.links[network.links.index.str.contains("dsm")].p_nom
+        * network.links_t.p_max_pu[
+            network.links[network.links.index.str.contains("dsm")].index
+        ].mean()
+    ).sum() * 1000
+    use = (
+        network.links[network.links.index.str.contains("dsm")].p_nom
+        * network.links_t.p0[
+            network.links[network.links.index.str.contains("dsm")].index
+        ]
+    ).sum().sum() * 1000
+
     return pot, use
 
+
 def emob_potential_usage(network):
-    pot = (network.links[network.links.index.str.contains('_flex')].p_nom * network.links_t.p_max_pu[network.links[network.links.index.str.contains('_flex')].index].mean()).sum()*1000
-    use = (network.links[network.links.index.str.contains('_flex')].p_nom * network.links_t.p0[network.links[network.links.index.str.contains('_flex')].index]).sum().sum()*1000
-    
+    pot = (
+        network.links[network.links.index.str.contains("_flex")].p_nom
+        * network.links_t.p_max_pu[
+            network.links[network.links.index.str.contains("_flex")].index
+        ].mean()
+    ).sum() * 1000
+    use = (
+        network.links[network.links.index.str.contains("_flex")].p_nom
+        * network.links_t.p0[
+            network.links[network.links.index.str.contains("_flex")].index
+        ]
+    ).sum().sum() * 1000
+
     return pot, use
 
 
@@ -204,11 +228,11 @@ def calc_results(network):
             "restliche Abwärme",
             "Erzeugung durch BHKW - Wärme",
             "Erzeugung durch Spitzenlastkessel",
-            "Nutzung von Flexibilitäten:", 
-            "E-Mobilität - durchschnittliches Potential", 
+            "Nutzung von Flexibilitäten:",
+            "E-Mobilität - durchschnittliches Potential",
             "E-Mobilität - Nutzung",
-            "DSM - durchschnittliches Potential", 
-            "DSM - Nutzung"
+            "DSM - durchschnittliches Potential",
+            "DSM - Nutzung",
         ],
     )
 
@@ -235,13 +259,13 @@ def calc_results(network):
 
     results.Wert["Objective"] = network.objective
     results.Einheit["Objective"] = "(€)"
-    
-    if network.snapshots[1]-network.snapshots[0] == pd.Timedelta(minutes=5):
+
+    if network.snapshots[1] - network.snapshots[0] == pd.Timedelta(minutes=5):
         res = 12
-    elif network.snapshots[1]-network.snapshots[0] == pd.Timedelta(minutes=15):
+    elif network.snapshots[1] - network.snapshots[0] == pd.Timedelta(minutes=15):
         res = 4
     else:
-        res=1
+        res = 1
 
     # Systemkosten
 
@@ -275,24 +299,33 @@ def calc_results(network):
 
     results.Wert["annualisierte marginale Kosten"] = marg
 
-    results.Wert["Erträge aus Trocknungsanlage"] = network.links_t.p0["TA"].groupby(np.arange(len(network.snapshots))//res).mean().sum() * (network.links.loc["TA"].marginal_cost)
+    results.Wert["Erträge aus Trocknungsanlage"] = network.links_t.p0["TA"].groupby(
+        np.arange(len(network.snapshots)) // res
+    ).mean().sum() * (network.links.loc["TA"].marginal_cost)
 
-    results.Wert["Erträge aus Netzeinspeisung"] = network.links_t.p0["NA_Sp"].groupby(np.arange(len(network.snapshots))//res).mean().sum() * (network.links.loc["NA_Sp"].marginal_cost)
+    results.Wert["Erträge aus Netzeinspeisung"] = network.links_t.p0["NA_Sp"].groupby(
+        np.arange(len(network.snapshots)) // res
+    ).mean().sum() * (network.links.loc["NA_Sp"].marginal_cost)
 
-    results.Wert["Kosten aus Netzbezug"] = network.generators_t.p["NeAn"].groupby(np.arange(len(network.snapshots))//res).mean().sum() * (network.generators.loc["NeAn"].marginal_cost)
+    results.Wert["Kosten aus Netzbezug"] = network.generators_t.p["NeAn"].groupby(
+        np.arange(len(network.snapshots)) // res
+    ).mean().sum() * (network.generators.loc["NeAn"].marginal_cost)
 
     results.Wert["Kosten aus Betrieb der BHKWs (inklusive Biogas)"] = (
         network.generators_t.p["BGA1"]
-        .groupby(np.arange(len(network.snapshots))//res).mean()
+        .groupby(np.arange(len(network.snapshots)) // res)
+        .mean()
         .sum()
         * (network.generators.loc["BGA1"].marginal_cost)
         + network.generators_t.p["BGA2"]
-        .groupby(np.arange(len(network.snapshots))//res).mean()
+        .groupby(np.arange(len(network.snapshots)) // res)
+        .mean()
         .sum()
         * (network.generators.loc["BGA2"].marginal_cost)
         + (
             network.links_t.p0[network.links[network.links.carrier == "KWK_AC"].index]
-            .groupby(np.arange(len(network.snapshots))//res).mean()
+            .groupby(np.arange(len(network.snapshots)) // res)
+            .mean()
             .sum()
             * (network.links[network.links.carrier == "KWK_AC"].marginal_cost)
         ).sum()
@@ -343,73 +376,167 @@ def calc_results(network):
     # Systemversorgung
 
     results.Wert["elektrische Last IES"] = (
-        network.loads_t.p_set[network.loads[network.loads.carrier == "AC"].index].groupby(np.arange(len(network.snapshots))//res).mean()
+        network.loads_t.p_set[network.loads[network.loads.carrier == "AC"].index]
+        .groupby(np.arange(len(network.snapshots)) // res)
+        .mean()
         .sum()
         .sum()
-        - network.loads_t.p_set["EV_el"].groupby(np.arange(len(network.snapshots))//res).mean().sum()
+        - network.loads_t.p_set["EV_el"]
+        .groupby(np.arange(len(network.snapshots)) // res)
+        .mean()
+        .sum()
     )
-    
+
     results.Wert["- Anschlussnehmer*innen"] = (
-        network.loads_t.p_set[network.loads[network.loads.carrier == "AC"].index].groupby(np.arange(len(network.snapshots))//res).mean()
+        network.loads_t.p_set[network.loads[network.loads.carrier == "AC"].index]
+        .groupby(np.arange(len(network.snapshots)) // res)
+        .mean()
         .sum()
         .sum()
-        - network.loads_t.p_set["EV_el"].groupby(np.arange(len(network.snapshots))//res).mean().sum() - network.loads_t.p_set["LS1"].groupby(np.arange(len(network.snapshots))//res).mean().sum() - network.loads_t.p_set["LS2"].groupby(np.arange(len(network.snapshots))//res).mean().sum()
+        - network.loads_t.p_set["EV_el"]
+        .groupby(np.arange(len(network.snapshots)) // res)
+        .mean()
+        .sum()
+        - network.loads_t.p_set["LS1"]
+        .groupby(np.arange(len(network.snapshots)) // res)
+        .mean()
+        .sum()
+        - network.loads_t.p_set["LS2"]
+        .groupby(np.arange(len(network.snapshots)) // res)
+        .mean()
+        .sum()
     )
-    
-    results.Wert["- Ladesäulen E-Mobilität"] = network.loads_t.p_set["LS1"].groupby(np.arange(len(network.snapshots))//res).mean().sum() + network.loads_t.p_set["LS2"].groupby(np.arange(len(network.snapshots))//res).mean().sum()
 
-    results.Wert["elektrischer Eigenverbrauch BGA"] = network.loads_t.p_set["EV_el"].groupby(np.arange(len(network.snapshots))//res).mean().sum()
+    results.Wert["- Ladesäulen E-Mobilität"] = (
+        network.loads_t.p_set["LS1"]
+        .groupby(np.arange(len(network.snapshots)) // res)
+        .mean()
+        .sum()
+        + network.loads_t.p_set["LS2"]
+        .groupby(np.arange(len(network.snapshots)) // res)
+        .mean()
+        .sum()
+    )
 
-    results.Wert["Wärmelast (Wärmenetz)"] = network.loads_t.p_set["WL"].groupby(np.arange(len(network.snapshots))//res).mean().sum().sum()
+    results.Wert["elektrischer Eigenverbrauch BGA"] = (
+        network.loads_t.p_set["EV_el"]
+        .groupby(np.arange(len(network.snapshots)) // res)
+        .mean()
+        .sum()
+    )
 
-    results.Wert["Eigenverbrauch"] = network.loads_t.p_set["EV_W"].groupby(np.arange(len(network.snapshots))//res).mean().sum()
+    results.Wert["Wärmelast (Wärmenetz)"] = (
+        network.loads_t.p_set["WL"]
+        .groupby(np.arange(len(network.snapshots)) // res)
+        .mean()
+        .sum()
+        .sum()
+    )
+
+    results.Wert["Eigenverbrauch"] = (
+        network.loads_t.p_set["EV_W"]
+        .groupby(np.arange(len(network.snapshots)) // res)
+        .mean()
+        .sum()
+    )
 
     results.Wert["Erzeugung aus PV-Anlagen"] = (
         network.generators_t.p[
             network.generators[network.generators.carrier == "PV"].index
-        ].groupby(np.arange(len(network.snapshots))//res).mean()
+        ]
+        .groupby(np.arange(len(network.snapshots)) // res)
+        .mean()
         .sum()
         .sum()
     )
 
     results.Wert["Erzeugung durch BHKW - Strom"] = abs(
-        network.links_t.p1[network.links[network.links.carrier == "KWK_AC"].index].groupby(np.arange(len(network.snapshots))//res).mean()
+        network.links_t.p1[network.links[network.links.carrier == "KWK_AC"].index]
+        .groupby(np.arange(len(network.snapshots)) // res)
+        .mean()
         .sum()
         .sum()
     )
 
     results.Wert["Erzeugung durch BHKW - Wärme"] = abs(
-        network.links_t.p1[network.links[network.links.carrier == "KWK_heat"].index].groupby(np.arange(len(network.snapshots))//res).mean()
+        network.links_t.p1[network.links[network.links.carrier == "KWK_heat"].index]
+        .groupby(np.arange(len(network.snapshots)) // res)
+        .mean()
         .sum()
         .sum()
     )
 
-    results.Wert["Erzeugung durch Spitzenlastkessel"] = network.generators_t.p[
-        "SpK"
-    ].groupby(np.arange(len(network.snapshots))//res).mean().sum()
+    results.Wert["Erzeugung durch Spitzenlastkessel"] = (
+        network.generators_t.p["SpK"]
+        .groupby(np.arange(len(network.snapshots)) // res)
+        .mean()
+        .sum()
+    )
 
-    results.Wert["Last der Trocknungsanlage"] = network.links_t.p0["TA"].groupby(np.arange(len(network.snapshots))//res).mean().sum()
+    results.Wert["Last der Trocknungsanlage"] = (
+        network.links_t.p0["TA"]
+        .groupby(np.arange(len(network.snapshots)) // res)
+        .mean()
+        .sum()
+    )
 
-    results.Wert["restliche Abwärme"] = network.links_t.p0["Abw"].groupby(np.arange(len(network.snapshots))//res).mean().sum()
+    results.Wert["restliche Abwärme"] = (
+        network.links_t.p0["Abw"]
+        .groupby(np.arange(len(network.snapshots)) // res)
+        .mean()
+        .sum()
+    )
 
-    results.Wert["Netzbezug"] = network.generators_t.p["NeAn"].groupby(np.arange(len(network.snapshots))//res).mean().sum()
+    results.Wert["Netzbezug"] = (
+        network.generators_t.p["NeAn"]
+        .groupby(np.arange(len(network.snapshots)) // res)
+        .mean()
+        .sum()
+    )
 
-    results.Wert["Netzeinspeisung"] = network.links_t.p0["NA_Sp"].groupby(np.arange(len(network.snapshots))//res).mean().sum()
+    results.Wert["Netzeinspeisung"] = (
+        network.links_t.p0["NA_Sp"]
+        .groupby(np.arange(len(network.snapshots)) // res)
+        .mean()
+        .sum()
+    )
 
     results.Wert["Biogaserzeugung"] = (
-        network.generators_t.p["BGA1"].groupby(np.arange(len(network.snapshots))//res).mean().sum() + network.generators_t.p["BGA2"].groupby(np.arange(len(network.snapshots))//res).mean().sum()
+        network.generators_t.p["BGA1"]
+        .groupby(np.arange(len(network.snapshots)) // res)
+        .mean()
+        .sum()
+        + network.generators_t.p["BGA2"]
+        .groupby(np.arange(len(network.snapshots)) // res)
+        .mean()
+        .sum()
     )
-    
+
     # Nutzung von Flexibilitäten
-    
-    pot = network.links_t.p_max_pu.mean() * network.links.p_nom[network.links.index.isin(network.links_t.p_max_pu.columns)]
-    
-    results.Wert["DSM - durchschnittliches Potential"] = pot[pot.index.str.startswith('AN')].sum() * 1000
-    
-    results.Wert["DSM - Nutzung"] = (network.links_t.p0.sum()[network.links_t.p0.sum().index.str.contains('dsm')] * network.links.p_nom[network.links.index.str.contains('dsm')]).sum() * 1000
-    
-    results.Wert["E-Mobilität - durchschnittliches Potential"] = pot[pot.index.str.startswith('LS')].sum() * 1000
-    
-    results.Wert["E-Mobilität - Nutzung"] = (network.links_t.p0.sum()[network.links_t.p0.sum().index.str.contains('flex')] * network.links.p_nom[network.links.index.str.contains('flex')]).sum() * 1000
+
+    pot = (
+        network.links_t.p_max_pu.mean()
+        * network.links.p_nom[
+            network.links.index.isin(network.links_t.p_max_pu.columns)
+        ]
+    )
+
+    results.Wert["DSM - durchschnittliches Potential"] = (
+        pot[pot.index.str.startswith("AN")].sum() * 1000
+    )
+
+    results.Wert["DSM - Nutzung"] = (
+        network.links_t.p0.sum()[network.links_t.p0.sum().index.str.contains("dsm")]
+        * network.links.p_nom[network.links.index.str.contains("dsm")]
+    ).sum() * 1000
+
+    results.Wert["E-Mobilität - durchschnittliches Potential"] = (
+        pot[pot.index.str.startswith("LS")].sum() * 1000
+    )
+
+    results.Wert["E-Mobilität - Nutzung"] = (
+        network.links_t.p0.sum()[network.links_t.p0.sum().index.str.contains("flex")]
+        * network.links.p_nom[network.links.index.str.contains("flex")]
+    ).sum() * 1000
 
     return results
