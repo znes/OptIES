@@ -51,7 +51,7 @@ Aufbau des Tools
 
 Das zentrale Skript dieses Tools bildet :code:`opties.py`, welches der Konfiguration und Ausführung der Berechnungen dient. :code:`data.py` beinhaltet die Funktionen zum Import der notwendigen Eingangsdaten und zum Erstellen eines entsprechenden *PyPSA Networks*. Funktionen innerhalb der Optimierung sowie speziell benötigte Nebenbedingungen sind in :code:`optimization.py` zu finden. :code:`results.py` und :code:`plots.py` halten Funktionalitäten zur Auswertung und grafischen Darstellung der Ergebnisse bereit. 
 
-Neben den beschriebenen Skripten werden Daten für die Durchführung von Optimierungsrechnungen des vorliegenden Systems benötigt. Die Inputdatensätze sind auf `zenodo <https://zenodo.org/doi/10.5281/zenodo.10784799>`_) veröffentlicht. Diese Datensätze enthalten einerseits reale Messdaten und andererseits synthetisch generierte Daten.
+Neben den beschriebenen Skripten werden Daten für die Durchführung von Optimierungsrechnungen des vorliegenden Systems benötigt. Die Inputdatensätze sind auf `zenodo <https://zenodo.org/doi/10.5281/zenodo.10784799>`_ veröffentlicht. Diese Datensätze enthalten einerseits reale Messdaten und andererseits synthetisch generierte Daten.
 
 Modellkonzept
 =============
