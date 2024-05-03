@@ -9,7 +9,7 @@ Diese Datensätze enthalten einerseits reale Messdaten und andererseits syntheti
 
 .. figure:: img/Verfuegbarkeit_Messungen.png
   :name: messungen
-  :width: 700
+  :width: 800
 
 
 Copyleft
