@@ -147,6 +147,18 @@ def calc_network_expansion(network):
 
     return lines, dc_links
 
+def dsm_potential_usage(network):
+    pot = (network.links[network.links.index.str.contains('dsm')].p_nom * network.links_t.p_max_pu[network.links[network.links.index.str.contains('dsm')].index].mean()).sum()*1000
+    use = (network.links[network.links.index.str.contains('dsm')].p_nom * network.links_t.p0[network.links[network.links.index.str.contains('dsm')].index]).sum().sum()*1000
+    
+    return pot, use
+
+def emob_potential_usage(network):
+    pot = (network.links[network.links.index.str.contains('_flex')].p_nom * network.links_t.p_max_pu[network.links[network.links.index.str.contains('_flex')].index].mean()).sum()*1000
+    use = (network.links[network.links.index.str.contains('_flex')].p_nom * network.links_t.p0[network.links[network.links.index.str.contains('_flex')].index]).sum().sum()*1000
+    
+    return pot, use
+
 
 def calc_results(network):
     results = pd.DataFrame(
@@ -192,6 +204,11 @@ def calc_results(network):
             "restliche Abwärme",
             "Erzeugung durch BHKW - Wärme",
             "Erzeugung durch Spitzenlastkessel",
+            "Nutzung von Flexibilitäten:", 
+            "E-Mobilität - durchschnittliches Potential", 
+            "E-Mobilität - Nutzung",
+            "DSM - durchschnittliches Potential", 
+            "DSM - Nutzung"
         ],
     )
 
@@ -211,6 +228,8 @@ def calc_results(network):
     results.Einheit[results.index.str.contains("Erzeugung")] = "MWh"
     results.Einheit[results.index.str.contains("erzeugung")] = "MWh"
     results.Einheit[results.index.str.contains("rel.")] = "p.u."
+    results.Einheit[results.index.str.contains("Potential")] = "kW"
+    results.Einheit[results.index.str.contains("Nutzung")] = "kWh"
     results.Einheit[results.index.str.contains(":")] = "-"
     results.Wert[results.index.str.contains(":")] = "-"
 
@@ -380,5 +399,17 @@ def calc_results(network):
     results.Wert["Biogaserzeugung"] = (
         network.generators_t.p["BGA1"].groupby(np.arange(len(network.snapshots))//res).mean().sum() + network.generators_t.p["BGA2"].groupby(np.arange(len(network.snapshots))//res).mean().sum()
     )
+    
+    # Nutzung von Flexibilitäten
+    
+    pot = network.links_t.p_max_pu.mean() * network.links.p_nom[network.links.index.isin(network.links_t.p_max_pu.columns)]
+    
+    results.Wert["DSM - durchschnittliches Potential"] = pot[pot.index.str.startswith('AN')].sum() * 1000
+    
+    results.Wert["DSM - Nutzung"] = (network.links_t.p0.sum()[network.links_t.p0.sum().index.str.contains('dsm')] * network.links.p_nom[network.links.index.str.contains('dsm')]).sum() * 1000
+    
+    results.Wert["E-Mobilität - durchschnittliches Potential"] = pot[pot.index.str.startswith('LS')].sum() * 1000
+    
+    results.Wert["E-Mobilität - Nutzung"] = (network.links_t.p0.sum()[network.links_t.p0.sum().index.str.contains('flex')] * network.links.p_nom[network.links.index.str.contains('flex')]).sum() * 1000
 
     return results
