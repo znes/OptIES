@@ -59,7 +59,7 @@ def import_data(args):
 
 def import_timeseries(args):
     
-    path=args["path"]+"timeseries/"
+    path=args["path"]#+"timeseries/"
     use_real_data=args["use_real_data"]
     temporal=args["temporal_resolution"]
     
@@ -535,7 +535,7 @@ def adapt_settings(network, args):
         network.lines.s_nom_extendable = True
         
     if 'pv' in args["extendable_components"]:
-        network.generators[network.generators.carrier=='PV'].p_nom_extendable = True
+        network.generators.loc[network.generators[network.generators.carrier=='PV'].index, 'p_nom_extendable'] = True
         
     if 'battery' in args["extendable_components"]:
         network.storage_units.at['BSp', 'p_nom_extendable'] = True
