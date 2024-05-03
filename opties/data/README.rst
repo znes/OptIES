@@ -3,7 +3,7 @@ Notwendige Inputdaten
 
 In diesem Ordner sollten sich die Inputdatensätze in Form von csv-Dateien befinden.
 
-Geeignete Inputdatensätze sind auf *zenodo* (DOI `https://zenodo.org/doi/10.5281/zenodo.11109217`_) veröffentlicht. 
+Geeignete Inputdatensätze sind auf `zenodo <https://zenodo.org/doi/10.5281/zenodo.10784799>`_ veröffentlicht. 
 
 Diese Datensätze enthalten einerseits reale Messdaten und andererseits synthetisch generierte Daten. Die folgende Übersicht zeigt die Verfügbarkeit der gemessenen Zeitreihen, weitere Informationen sind der Dokumentation auf zenodo zu entnehmen. 
 
