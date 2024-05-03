@@ -7,9 +7,9 @@ Geeignete Inputdatensätze sind auf `zenodo <https://zenodo.org/doi/10.5281/zeno
 
 Diese Datensätze enthalten einerseits reale Messdaten und andererseits synthetisch generierte Daten. Die folgende Übersicht zeigt die Verfügbarkeit der gemessenen Zeitreihen, weitere Informationen sind der Dokumentation auf zenodo zu entnehmen. 
 
-.. figure:: Verfuegbarkeit_Messungen.png
+.. figure:: img/Verfuegbarkeit_Messungen.png
   :name: messungen
-  :width: 800
+  :width: 700
 
 
 Copyleft
