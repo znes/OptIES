@@ -38,12 +38,12 @@ __author__ = "KathiEsterl, MatthiasW, mohsenmansouri"
 
 args = {
     "path": "data/",
-    "use_real_data": True, # if True, temporal resolution modifiable
-    "temporal_resolution": '15min', #  {'5min', '15min', 'hourly'}, for synth. only hourly
+    "use_real_data": False, # if True, temporal resolution modifiable
+    "temporal_resolution": 'hourly', #  {'5min', '15min', 'hourly'}, for synth. only hourly
     "start_hour": 1, 
     "end_hour": 8760,
     "flexible_components": {},# {'emob', 'dsm'}, # {emob, dsm, biogas-remuneration}, only hourly
-    "extendable_components": {}, # {el_lines, pv, battery, heat-store}
+    "extendable_components": {}, # {'el_lines', 'pv', 'battery', 'heat-store'}
     "method": {
         "type": "lopf",
         "n_iter": 4,
