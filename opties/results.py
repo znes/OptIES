@@ -526,8 +526,9 @@ def calc_results(network):
     )
 
     results.Wert["DSM - Nutzung"] = (
-        network.links_t.p0.sum()[network.links_t.p0.sum().index.str.contains("dsm")]
-        * network.links.p_nom[network.links.index.str.contains("dsm")]
+        network.links_t.p0.clip(lower=0).sum()[
+            network.links_t.p0.sum().index.str.contains("dsm")
+        ]
     ).sum() * 1000
 
     results.Wert["E-Mobilität - durchschnittliches Potential"] = (
@@ -535,8 +536,9 @@ def calc_results(network):
     )
 
     results.Wert["E-Mobilität - Nutzung"] = (
-        network.links_t.p0.sum()[network.links_t.p0.sum().index.str.contains("flex")]
-        * network.links.p_nom[network.links.index.str.contains("flex")]
+        network.links_t.p0.clip(lower=0).sum()[
+            network.links_t.p0.sum().index.str.contains("flex")
+        ]
     ).sum() * 1000
 
     return results

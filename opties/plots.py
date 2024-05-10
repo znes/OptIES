@@ -111,10 +111,16 @@ def dsm_potential_usage(network, snapshots=[0, 8759], hour="5H"):
     )
     df = pd.DataFrame(index=index, columns=["pmin", "pmax"])
     df["pmin"] = (
-        network.links_t.p_min_pu[dsm.index].iloc[snapshots[0] : snapshots[1]]
+        (
+            network.links_t.p_min_pu[dsm.index].iloc[snapshots[0] : snapshots[1]]
+            * network.links.loc[dsm.index].p_nom
+        )
     ).sum(axis=1).resample(hour).mean() * 1000
     df["pmax"] = (
-        network.links_t.p_max_pu[dsm.index].iloc[snapshots[0] : snapshots[1]]
+        (
+            network.links_t.p_max_pu[dsm.index].iloc[snapshots[0] : snapshots[1]]
+            * network.links.loc[dsm.index].p_nom
+        )
     ).sum(axis=1).resample(hour).mean() * 1000
 
     ax.fill_between(df.index, df.pmin, df.pmax, alpha=0.2, label="Potential")
@@ -142,10 +148,16 @@ def dsm_potential_usage(network, snapshots=[0, 8759], hour="5H"):
         )
         df = pd.DataFrame(index=index, columns=["pmin", "pmax"])
         df["pmin"] = (
-            network.links_t.p_min_pu[emob.index].iloc[snapshots[0] : snapshots[1]]
+            (
+                network.links_t.p_min_pu[emob.index].iloc[snapshots[0] : snapshots[1]]
+                * network.links.loc[emob.index].p_nom
+            )
         ).sum(axis=1).resample(hour).mean() * 1000
         df["pmax"] = (
-            network.links_t.p_max_pu[emob.index].iloc[snapshots[0] : snapshots[1]]
+            (
+                network.links_t.p_max_pu[emob.index].iloc[snapshots[0] : snapshots[1]]
+                * network.links.loc[emob.index].p_nom
+            )
         ).sum(axis=1).resample(hour).mean() * 1000
 
         ax.fill_between(df.index, df.pmin, df.pmax, alpha=0.2, label="Potential")
