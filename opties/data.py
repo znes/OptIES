@@ -118,8 +118,17 @@ def import_timeseries(args):
         # bei Verwendung synthetischer Zeitreihen
         # in fester stündlicher Auflösung für 2019
 
-        el_loads = pd.read_csv(path + "el_load_synth.csv").set_index("time")
-        el_loads.index = pd.date_range("2019-01-01 00:00", "2019-12-31 23:00", freq="H")
+        if args["scale_synth_to_real"]:
+            el_loads = pd.read_csv(path + "el_load_synth_skal.csv").set_index("time")
+            el_loads.index = pd.date_range(
+                "2019-01-01 00:00", "2019-12-31 23:00", freq="H"
+            )
+
+        else:
+            el_loads = pd.read_csv(path + "el_load_synth.csv").set_index("time")
+            el_loads.index = pd.date_range(
+                "2019-01-01 00:00", "2019-12-31 23:00", freq="H"
+            )
 
         heat_load = pd.read_csv(path + "heat_load_synth.csv").set_index("time")
         heat_load.index = pd.date_range(
@@ -162,11 +171,21 @@ def create_pypsa_network(
             network.set_snapshots(
                 pd.date_range("2023-02-14 00:00", "2024-02-13 23:55", freq="5min")
             )
+            network.snapshot_weightings.objective = 1 / 12
+            network.snapshot_weightings.stores = 1 / 12
+            network.snapshot_weightings.generators = 1 / 12
+            args["start_hour"] = args["start_hour"] * 12
+            args["end_hour"] = args["end_hour"] * 12
 
         elif temporal == "15min":
             network.set_snapshots(
                 pd.date_range("2023-02-14 00:00", "2024-02-13 23:45", freq="15min")
             )
+            network.snapshot_weightings.objective = 1 / 4
+            network.snapshot_weightings.stores = 1 / 4
+            network.snapshot_weightings.generators = 1 / 4
+            args["start_hour"] = args["start_hour"] * 4
+            args["end_hour"] = args["end_hour"] * 4
 
         else:
             network.set_snapshots(
