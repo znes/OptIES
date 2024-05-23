@@ -39,6 +39,7 @@ __author__ = "KathiEsterl, MatthiasW, mohsenmansouri"
 args = {
     "path": "data/",
     "use_real_data": False,  # if True, temporal resolution modifiable
+    "scale_synth_to_real": False,  # if True, synth. data is scaled to real, only for synth. data
     "temporal_resolution": "hourly",  #  {'5min', '15min', 'hourly'}, for synth. only hourly
     "start_hour": 1,
     "end_hour": 8760,
