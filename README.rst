@@ -9,7 +9,6 @@ Ziel des Forschungsprojekts ist es, lokale sowie nationale Herausforderungen der
 
 Installation für Entwickler*innen
 =================================
-Das Tool befindet sich derzeit noch in der Entwicklung.
 
 Es wird die Installation innerhalb einer eigenen virtuellen Umgebung empfohlen:
 
