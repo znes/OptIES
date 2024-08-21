@@ -208,19 +208,10 @@ def calc_ghg_emissions(network):
     else:
         res = 1
 
+    # Energiemengen in MWh
     production_pv = (
         network.generators_t.p[
             network.generators[network.generators.carrier == "PV"].index
-        ]
-        .groupby(np.arange(len(network.snapshots)) // res)
-        .mean()
-        .sum()
-        .sum()
-    )
-
-    production_biomass_AC = abs(
-        network.links_t.p1[
-            network.links[network.links.carrier == "KWK_AC"].index
         ]
         .groupby(np.arange(len(network.snapshots)) // res)
         .mean()
@@ -248,22 +239,86 @@ def calc_ghg_emissions(network):
         .mean()
         .sum()
     )
+
     load_minus_pv_grid = load_ies - production_pv - production_grid
-    # Energiemengen in MWh
+
+    # spez. Emissionen in g/kWh
+    # Quelle für spez. Emissionen von PV und Biomasse:
+    # https://www.ipcc.ch/site/assets/uploads/2018/02/ipcc_wg3_ar5_annex-iii.pdf
+    # Seite 1335
+    # Quelle für spez. Emissionen von Netzbezug (Durchschnittswert aus 2023):
+    # https://www.umweltbundesamt.de/themen/co2-emissionen-pro-kilowattstunde-strom-2023
     emissions_sp_pv = 41
     emissions_sp_biomass_AC = 230
     emissions_sp_grid = 380
-    # spez. Emissionen in g/kWh
+    emissionen_leitungen = 0
+
     emissions_abs_pv = production_pv * emissions_sp_pv
-    emissions_abs_biomass_AC = production_biomass_AC * emissions_sp_biomass_AC
     emissions_abs_grid = production_grid * emissions_sp_grid
     emissions_load_minus_pv_grid = load_minus_pv_grid * emissions_sp_biomass_AC
-    # abs. emissionen in kg (MWh*(g/kWh) = kg)
 
+    # abs. emissionen in kg (MWh*(g/kWh) = kg)
     emissions_total = (
         emissions_load_minus_pv_grid + emissions_abs_pv + emissions_abs_grid
     )
     return emissions_total
+
+
+def calc_autarkiegrad(network):
+    pv = network.generators[network.generators.carrier == "PV"]
+    pv_gen = network.generators_t.p[pv.index].sum(axis=1)
+
+    loads = network.loads[
+        (network.loads.carrier == "AC") & (network.loads.bus != "BGA_AC")
+    ]
+    network.loads_t.p_set[loads.index]
+    sum_loads = network.loads_t.p_set[loads.index].sum(axis=1)
+
+    diff = pv_gen >= sum_loads
+    diff.value_counts(True)
+
+    share_of_autarkic_hours = (diff.value_counts()[1] / 8760) * 100
+
+    return share_of_autarkic_hours
+
+
+def calc_pv_share_of_load(network):
+    if network.snapshots[1] - network.snapshots[0] == pd.Timedelta(minutes=5):
+        res = 12
+    elif network.snapshots[1] - network.snapshots[0] == pd.Timedelta(
+        minutes=15
+    ):
+        res = 4
+    else:
+        res = 1
+
+    production_pv = (
+        network.generators_t.p[
+            network.generators[network.generators.carrier == "PV"].index
+        ]
+        .groupby(np.arange(len(network.snapshots)) // res)
+        .mean()
+        .sum()
+        .sum()
+    )
+
+    load_ies = (
+        network.loads_t.p_set[
+            network.loads[network.loads.carrier == "AC"].index
+        ]
+        .groupby(np.arange(len(network.snapshots)) // res)
+        .mean()
+        .sum()
+        .sum()
+        - network.loads_t.p_set["EV_el"]
+        .groupby(np.arange(len(network.snapshots)) // res)
+        .mean()
+        .sum()
+    )
+
+    pv_share_of_load = (production_pv / load_ies) * 100
+
+    return pv_share_of_load
 
 
 def calc_results(network):
@@ -308,7 +363,9 @@ def calc_results(network):
             "restliche Abwärme",
             "Erzeugung durch BHKW - Wärme",
             "Erzeugung durch Spitzenlastkessel",
-            "Treibhausgasemissionen",
+            "Treibhausgasemissionen Stromversorgung IES",
+            "Anteil der Stunden mit Lastdeckung durch PV",
+            "Anteil PV an Stromversorgung IES",
             "Nutzung von Flexibilitäten:",
             "E-Mobilität - durchschnittliches Potential",
             "E-Mobilität - Nutzung",
@@ -335,9 +392,12 @@ def calc_results(network):
     results.Einheit[results.index.str.contains("rel.")] = "p.u."
     results.Einheit[results.index.str.contains("Potential")] = "kW"
     results.Einheit[results.index.str.contains("Nutzung")] = "kWh"
-    results.Einheit[results.index.str.contains("Treibhausgasemissionen")] = (
-        "kg C02 eq."
-    )
+    results.Einheit[
+        results.index.str.contains(
+            "Treibhausgasemissionen Stromversorgung IES"
+        )
+    ] = "kg C02e"
+    results.Einheit[results.index.str.contains("Anteil")] = "%"
     results.Einheit[results.index.str.contains(":")] = "-"
     results.Wert[results.index.str.contains(":")] = "-"
 
@@ -618,7 +678,17 @@ def calc_results(network):
         .sum()
     )
 
-    results.Wert["Treibhausgasemissionen"] = calc_ghg_emissions(network)
+    results.Wert["Treibhausgasemissionen Stromversorgung IES"] = (
+        calc_ghg_emissions(network)
+    )
+
+    results.Wert["Anteil der Stunden mit Lastdeckung durch PV"] = (
+        calc_autarkiegrad(network)
+    )
+
+    results.Wert["Anteil PV an Stromversorgung IES"] = calc_pv_share_of_load(
+        network
+    )
 
     # Nutzung von Flexibilitäten
 
