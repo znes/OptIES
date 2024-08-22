@@ -123,45 +123,46 @@ def dsm_potential_usage(network, snapshots=[0, 8759], hour="5H"):
         )
     ).sum(axis=1).resample(hour).mean() * 1000
 
-    ax.fill_between(df.index, df.pmin, df.pmax, alpha=0.2, label="Potential")
+    ax.fill_between(df.index, df.pmin, df.pmax, alpha=0.4, label="Potential")
     fig.legend(loc="upper right")
 
-    def emob_potential_usage(network, snapshots=[0, 8759], hour="5H"):
-        fig, ax = plt.subplots()
-        ax.set_ylabel("Flexibilität durch E-Mobilität: Potential und Nutzung in kW")
-        ax.set_xlabel("Zeitschritte")
 
-        emob = network.links[network.links.index.str.contains("flex")]
-        ax.plot(
-            (
-                (network.links_t.p0[emob.index].iloc[snapshots[0] : snapshots[1]])
-                .sum(axis=1)
-                .resample(hour)
-                .mean()
-            )
-            * 1000,
-            label="Nutzung",
+def emob_potential_usage(network, snapshots=[0, 8759], hour="5H"):
+    fig, ax = plt.subplots()
+    ax.set_ylabel("Flexibilität durch E-Mobilität: Potential und Nutzung in kW")
+    ax.set_xlabel("Zeitschritte")
+
+    emob = network.links[network.links.index.str.contains("flex")]
+    ax.plot(
+        (
+            (network.links_t.p0[emob.index].iloc[snapshots[0] : snapshots[1]])
+            .sum(axis=1)
+            .resample(hour)
+            .mean()
         )
+        * 1000,
+        label="Nutzung",
+    )
 
-        index = pd.date_range(
-            network.snapshots[snapshots[0]], network.snapshots[snapshots[1]], freq=hour
+    index = pd.date_range(
+        network.snapshots[snapshots[0]], network.snapshots[snapshots[1]], freq=hour
+    )
+    df = pd.DataFrame(index=index, columns=["pmin", "pmax"])
+    df["pmin"] = (
+        (
+            network.links_t.p_min_pu[emob.index].iloc[snapshots[0] : snapshots[1]]
+            * network.links.loc[emob.index].p_nom
         )
-        df = pd.DataFrame(index=index, columns=["pmin", "pmax"])
-        df["pmin"] = (
-            (
-                network.links_t.p_min_pu[emob.index].iloc[snapshots[0] : snapshots[1]]
-                * network.links.loc[emob.index].p_nom
-            )
-        ).sum(axis=1).resample(hour).mean() * 1000
-        df["pmax"] = (
-            (
-                network.links_t.p_max_pu[emob.index].iloc[snapshots[0] : snapshots[1]]
-                * network.links.loc[emob.index].p_nom
-            )
-        ).sum(axis=1).resample(hour).mean() * 1000
+    ).sum(axis=1).resample(hour).mean() * 1000
+    df["pmax"] = (
+        (
+            network.links_t.p_max_pu[emob.index].iloc[snapshots[0] : snapshots[1]]
+            * network.links.loc[emob.index].p_nom
+        )
+    ).sum(axis=1).resample(hour).mean() * 1000
 
-        ax.fill_between(df.index, df.pmin, df.pmax, alpha=0.2, label="Potential")
-        fig.legend(loc="upper right")
+    ax.fill_between(df.index, df.pmin, df.pmax, alpha=0.4, label="Potential")
+    fig.legend(loc="upper right")
 
 
 def heat_load(network, snapshots=[0, 8759], hour="5H"):

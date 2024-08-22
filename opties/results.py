@@ -163,6 +163,12 @@ def calc_network_expansion(network):
 
     return lines, dc_links
 
+def battery_usage(network):
+    use = (
+        network.storage_units_t.p
+    ).clip(lower=0).sum().sum() * 1000
+    
+    return use
 
 def dsm_potential_usage(network):
     pot = (
@@ -171,11 +177,9 @@ def dsm_potential_usage(network):
             network.links[network.links.index.str.contains("dsm")].index
         ].mean()
     ).sum() * 1000
-    use = (
-        network.links[network.links.index.str.contains("dsm")].p_nom
-        * network.links_t.p0[
+    use = (network.links_t.p0[
             network.links[network.links.index.str.contains("dsm")].index
-        ]
+        ].clip(lower=0)
     ).sum().sum() * 1000
 
     return pot, use
@@ -189,10 +193,9 @@ def emob_potential_usage(network):
         ].mean()
     ).sum() * 1000
     use = (
-        network.links[network.links.index.str.contains("_flex")].p_nom
-        * network.links_t.p0[
+        network.links_t.p0[
             network.links[network.links.index.str.contains("_flex")].index
-        ]
+        ].clip(lower=0)
     ).sum().sum() * 1000
 
     return pot, use
@@ -209,6 +212,7 @@ def calc_ghg_emissions(network):
         res = 1
 
     # Energiemengen in MWh
+    
     production_pv = (
         network.generators_t.p[
             network.generators[network.generators.carrier == "PV"].index
@@ -358,7 +362,7 @@ def calc_results(network):
             "Netzbezug",
             "Netzeinspeisung",
             "Wärmelast (Wärmenetz)",
-            "Eigenverbrauch",
+            "Eigenverbrauch Wärme BGA",
             "Last der Trocknungsanlage",
             "restliche Abwärme",
             "Erzeugung durch BHKW - Wärme",
@@ -367,6 +371,7 @@ def calc_results(network):
             "Anteil der Stunden mit Lastdeckung durch PV",
             "Anteil PV an Stromversorgung IES",
             "Nutzung von Flexibilitäten:",
+            "Batteriespeichernutzung (Ausspeicherung)",
             "E-Mobilität - durchschnittliches Potential",
             "E-Mobilität - Nutzung",
             "DSM - durchschnittliches Potential",
@@ -392,6 +397,7 @@ def calc_results(network):
     results.Einheit[results.index.str.contains("rel.")] = "p.u."
     results.Einheit[results.index.str.contains("Potential")] = "kW"
     results.Einheit[results.index.str.contains("Nutzung")] = "kWh"
+    results.Einheit[results.index.str.contains("nutzung")] = "kWh"
     results.Einheit[
         results.index.str.contains(
             "Treibhausgasemissionen Stromversorgung IES"
@@ -595,7 +601,7 @@ def calc_results(network):
         .sum()
     )
 
-    results.Wert["Eigenverbrauch"] = (
+    results.Wert["Eigenverbrauch Wärme BGA"] = (
         network.loads_t.p_set["EV_W"]
         .groupby(np.arange(len(network.snapshots)) // res)
         .mean()
@@ -691,32 +697,24 @@ def calc_results(network):
     )
 
     # Nutzung von Flexibilitäten
-
-    pot = (
-        network.links_t.p_max_pu.mean()
-        * network.links.p_nom[
-            network.links.index.isin(network.links_t.p_max_pu.columns)
-        ]
-    )
+    
+    results.Wert["Batteriespeichernutzung (Ausspeicherung)"] = (
+        battery_usage(network))
 
     results.Wert["DSM - durchschnittliches Potential"] = (
-        pot[pot.index.str.startswith("AN")].sum() * 1000
+        dsm_potential_usage(network)[0]
     )
 
     results.Wert["DSM - Nutzung"] = (
-        network.links_t.p0.clip(lower=0).sum()[
-            network.links_t.p0.sum().index.str.contains("dsm")
-        ]
-    ).sum() * 1000
+        dsm_potential_usage(network)[1]
+    )
 
     results.Wert["E-Mobilität - durchschnittliches Potential"] = (
-        pot[pot.index.str.startswith("LS")].sum() * 1000
+        emob_potential_usage(network)[0]
     )
 
     results.Wert["E-Mobilität - Nutzung"] = (
-        network.links_t.p0.clip(lower=0).sum()[
-            network.links_t.p0.sum().index.str.contains("flex")
-        ]
-    ).sum() * 1000
+        emob_potential_usage(network)[1]
+    )
 
     return results
