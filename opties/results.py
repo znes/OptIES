@@ -306,10 +306,32 @@ def calc_results(network):
     results.Wert["Erträge aus Netzeinspeisung"] = network.links_t.p0["NA_Sp"].groupby(
         np.arange(len(network.snapshots)) // res
     ).mean().sum() * (network.links.loc["NA_Sp"].marginal_cost)
+    
+    if "NA_Sp1" in network.links_t.p0.columns:
+    # Berechnung der Netzeinspeisung
+        results.Wert["Erträge aus Netzeinspeisung PV"] = (
+            network.links_t.p0["NA_Sp1"].mul(network.snapshot_weightings.objective, axis=0).sum()
+            + network.links_t.p0["NA_Sp2"].mul(network.snapshot_weightings.objective, axis=0).sum()
+            + network.links_t.p0["NA_Sp3"].mul(network.snapshot_weightings.objective, axis=0).sum()
+            + network.links_t.p0["NA_Sp4"].mul(network.snapshot_weightings.objective, axis=0).sum()
+            + network.links_t.p0["NA_Sp5"].mul(network.snapshot_weightings.objective, axis=0).sum()
+            + network.links_t.p0["NA_Sp6"].mul(network.snapshot_weightings.objective, axis=0).sum()
+        ) * network.links.loc["NA_Sp1"].marginal_cost
+
+       
+    if "NA_Wind" in network.links_t.p0:
+        results.Wert["Erträge aus Netzeinspeisung WKA"] = network.links_t.p0["NA_Wind"].mul(
+            network.snapshot_weightings.objective, axis=0
+        ).sum() * (network.links.loc["NA_Wind"].marginal_cost)
 
     results.Wert["Kosten aus Netzbezug"] = network.generators_t.p["NeAn"].groupby(
         np.arange(len(network.snapshots)) // res
     ).mean().sum() * (network.generators.loc["NeAn"].marginal_cost)
+    
+    
+    results.Wert["Kosten aus Betrieb des SpLK"] = network.generators_t.p["SpK"].mul(   
+        network.snapshot_weightings.objective, axis=0
+    ).sum() * (network.generators.loc["SpK"].marginal_cost)
 
     results.Wert["Kosten aus Betrieb der BHKWs (inklusive Biogas)"] = (
         network.generators_t.p["BGA1"]
@@ -500,6 +522,17 @@ def calc_results(network):
         .mean()
         .sum()
     )
+    
+    if "NA_Sp1" in network.links_t.p0.columns:
+        results.Wert["Netzeinspeisung PV"] = network.links_t.p0["NA_Sp1"].sum() 
+        + network.links_t.p0["NA_Sp2"].sum() 
+        + network.links_t.p0["NA_Sp3"].sum() 
+        + network.links_t.p0["NA_Sp4"].sum() 
+        + network.links_t.p0["NA_Sp5"].sum() 
+        + network.links_t.p0["NA_Sp6"].sum()
+  
+    if "NA_Wind" in network.links_t.p0.columns:
+        results.Wert["Netzeinspeisung Wind"] = network.links_t.p0["NA_Wind"].sum()
 
     results.Wert["Biogaserzeugung"] = (
         network.generators_t.p["BGA1"]
@@ -522,7 +555,7 @@ def calc_results(network):
     )
 
     results.Wert["DSM - durchschnittliches Potential"] = (
-        pot[pot.index.str.startswith("AN")].sum() * 1000
+        pot[pot.index.str.startswith("AN","KN")].sum() * 1000
     )
 
     results.Wert["DSM - Nutzung"] = (

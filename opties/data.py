@@ -40,6 +40,9 @@ __author__ = "KathiEsterl"
 
 def import_data(args):
     path = args["path"]
+    
+    if args["grid_extension"]["extension"]:
+        path = "data_extension/"
 
     buses = pd.read_csv(path + "buses.csv").set_index("name")
     if "geometry" in buses.columns:
@@ -52,14 +55,22 @@ def import_data(args):
     stores = pd.read_csv(path + "stores.csv").set_index("name")
     links = pd.read_csv(path + "links.csv").set_index("name")
     loads = pd.read_csv(path + "loads.csv").set_index("name")
-
+    
+    if args["grid_extension"]["postEEG"]:
+        generators = pd.read_csv(path + "generatorsIES2_nachEEG.csv").set_index("name")
+        links = pd.read_csv(path + "links_IES2_nachEEG.csv").set_index("name")
     return buses, lines, generators, storage_units, stores, links, loads
 
 
 def import_timeseries(args):
-    path = args["path"]  # +"timeseries/"
+    path = args["path"] +"timeseries/"
     use_real_data = args["use_real_data"]
     temporal = args["temporal_resolution"]
+    
+    if args["grid_extension"]["extension"]:
+        path = "data_extension/timeseries/"
+
+    
 
     if use_real_data:
         # anpassen der network snapshots sowie der synthetischen Zeitreihen
@@ -106,7 +117,8 @@ def import_timeseries(args):
         pvgen = pvgen.append(pvgen[:1056], ignore_index=True)
         pvgen = pvgen.drop(pvgen.index[:1056])
         pv = pd.Series(data=pvgen["p_max_pu"].values.repeat(res), index=index)
-
+        
+        wind = None
     else:
         if temporal != "hourly":
             print(" ")
@@ -123,6 +135,8 @@ def import_timeseries(args):
             el_loads.index = pd.date_range(
                 "2019-01-01 00:00", "2019-12-31 23:00", freq="H"
             )
+            
+
 
         else:
             el_loads = pd.read_csv(path + "el_load_synth.csv").set_index("time")
@@ -143,8 +157,17 @@ def import_timeseries(args):
             pv["p_max_pu"].values,
             index=pd.date_range("2019-01-01 00:00", "2019-12-31 23:00", freq="H"),
         )
-
-    return el_loads, heat_load, gas_load, pv
+         
+        wind = None
+        
+        if args["grid_extension"]["extension"]:       
+            wind = pd.read_csv(path + "wind_timeseries_full.csv", sep=',')
+            wind = pd.Series(
+                wind["p_max_pu"].values,
+                index=pd.date_range("2019-01-01 00:00", "2019-12-31 23:00", freq="H"),
+            )
+            
+    return el_loads, heat_load, gas_load, pv, wind
 
 
 def create_pypsa_network(
@@ -159,10 +182,10 @@ def create_pypsa_network(
     heat_load,
     gas_load,
     pv,
+    wind,
     args,
 ):
     network = pypsa.Network()
-
     use_real_data = args["use_real_data"]
     temporal = args["temporal_resolution"]
 
@@ -255,6 +278,21 @@ def create_pypsa_network(
                 marginal_cost=gen.marginal_cost,
                 capital_cost=gen.capital_cost,
                 p_max_pu=pv,
+            )
+        elif gen.carrier == "Wind":
+            network.add(
+                "Generator",
+                name=gen.name,
+                carrier=gen.carrier,
+                bus=gen.bus,
+                control=gen.control,
+                p_nom=gen.p_nom,
+                p_nom_min=gen.p_nom_min,
+                p_nom_max=gen.p_nom_max,
+                p_nom_extendable=gen.p_nom_extendable,
+                marginal_cost=gen.marginal_cost,
+                capital_cost=gen.capital_cost,
+                p_max_pu=wind,
             )
         else:
             network.add(
@@ -472,7 +510,7 @@ def dsm_potentials(network):
 
     # 2) weitere AN (normale Haushalte)
 
-    an = network.loads.index[network.loads.index.str.startswith("AN")]
+    an = network.loads.index[network.loads.index.str.startswith("AN","KN")]
     # an = an.drop('AN1')
 
     ## zeitabhängige Potentiale verschiedener Anwendungen berechnen
