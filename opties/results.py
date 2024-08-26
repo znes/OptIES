@@ -43,16 +43,14 @@ def calc_investment_cost(network):
 
     if not ext_lines.empty:
         network_costs[0] = (
-            (ext_lines.s_nom_opt - ext_lines.s_nom_min)
-            * ext_lines.capital_cost
+            (ext_lines.s_nom_opt - ext_lines.s_nom_min) * ext_lines.capital_cost
         ).sum()
 
     if not ext_trafos.empty:
         network_costs[0] = (
             network_costs[0]
             + (
-                (ext_trafos.s_nom_opt - ext_trafos.s_nom)
-                * ext_trafos.capital_cost
+                (ext_trafos.s_nom_opt - ext_trafos.s_nom) * ext_trafos.capital_cost
             ).sum()
         )
 
@@ -69,8 +67,7 @@ def calc_investment_cost(network):
 
     if not ext_links.empty:
         link_costs = (
-            (ext_links.p_nom_opt - ext_links.p_nom_min)
-            * ext_links.capital_cost
+            (ext_links.p_nom_opt - ext_links.p_nom_min) * ext_links.capital_cost
         ).sum()
 
     # Batteriespeicher, Wärmespeicher, Biogasspeicher
@@ -81,19 +78,14 @@ def calc_investment_cost(network):
 
     if not ext_storage.empty:
         sto_costs[0] = (
-            (ext_storage.p_nom_opt - ext_storage.p_nom_min)
-            * ext_storage.capital_cost
+            (ext_storage.p_nom_opt - ext_storage.p_nom_min) * ext_storage.capital_cost
         ).sum()
 
     if not ext_store.empty:
         heat = ext_store[ext_store.index == "WSp"]
-        sto_costs[1] = (
-            (heat.e_nom_opt - heat.e_nom_min) * heat.capital_cost
-        ).sum()
+        sto_costs[1] = ((heat.e_nom_opt - heat.e_nom_min) * heat.capital_cost).sum()
         gas = ext_store[ext_store.index == "GSp"]
-        sto_costs[2] = (
-            (gas.e_nom_opt - gas.e_nom_min) * gas.capital_cost
-        ).sum()
+        sto_costs[2] = ((gas.e_nom_opt - gas.e_nom_min) * gas.capital_cost).sum()
 
     # Erzeugungseinheiten
     ext_gen = network.generators[network.generators.p_nom_extendable]
@@ -112,17 +104,13 @@ def calc_investment_cost(network):
 def calc_marginal_cost(network):
     if network.snapshots[1] - network.snapshots[0] == pd.Timedelta(minutes=5):
         res = 12
-    elif network.snapshots[1] - network.snapshots[0] == pd.Timedelta(
-        minutes=15
-    ):
+    elif network.snapshots[1] - network.snapshots[0] == pd.Timedelta(minutes=15):
         res = 4
     else:
         res = 1
 
     gen = (
-        network.generators_t.p.groupby(
-            np.arange(len(network.snapshots)) // res
-        )
+        network.generators_t.p.groupby(np.arange(len(network.snapshots)) // res)
         .mean()
         .sum()
         .mul(network.generators.marginal_cost)
@@ -139,9 +127,7 @@ def calc_marginal_cost(network):
     )
 
     stor = (
-        network.storage_units_t.p.groupby(
-            np.arange(len(network.snapshots)) // res
-        )
+        network.storage_units_t.p.groupby(np.arange(len(network.snapshots)) // res)
         .mean()
         .sum(axis=0)
         .mul(network.storage_units.marginal_cost)
@@ -163,12 +149,12 @@ def calc_network_expansion(network):
 
     return lines, dc_links
 
+
 def battery_usage(network):
-    use = (
-        network.storage_units_t.p
-    ).clip(lower=0).sum().sum() * 1000
-    
+    use = (network.storage_units_t.p).clip(lower=0).sum().sum() * 1000
+
     return use
+
 
 def dsm_potential_usage(network):
     pot = (
@@ -177,7 +163,8 @@ def dsm_potential_usage(network):
             network.links[network.links.index.str.contains("dsm")].index
         ].mean()
     ).sum() * 1000
-    use = (network.links_t.p0[
+    use = (
+        network.links_t.p0[
             network.links[network.links.index.str.contains("dsm")].index
         ].clip(lower=0)
     ).sum().sum() * 1000
@@ -201,73 +188,6 @@ def emob_potential_usage(network):
     return pot, use
 
 
-def calc_ghg_emissions(network):
-    if network.snapshots[1] - network.snapshots[0] == pd.Timedelta(minutes=5):
-        res = 12
-    elif network.snapshots[1] - network.snapshots[0] == pd.Timedelta(
-        minutes=15
-    ):
-        res = 4
-    else:
-        res = 1
-
-    # Energiemengen in MWh
-    
-    production_pv = (
-        network.generators_t.p[
-            network.generators[network.generators.carrier == "PV"].index
-        ]
-        .groupby(np.arange(len(network.snapshots)) // res)
-        .mean()
-        .sum()
-        .sum()
-    )
-
-    production_grid = (
-        network.generators_t.p["NeAn"]
-        .groupby(np.arange(len(network.snapshots)) // res)
-        .mean()
-        .sum()
-    )
-
-    load_ies = (
-        network.loads_t.p_set[
-            network.loads[network.loads.carrier == "AC"].index
-        ]
-        .groupby(np.arange(len(network.snapshots)) // res)
-        .mean()
-        .sum()
-        .sum()
-        - network.loads_t.p_set["EV_el"]
-        .groupby(np.arange(len(network.snapshots)) // res)
-        .mean()
-        .sum()
-    )
-
-    load_minus_pv_grid = load_ies - production_pv - production_grid
-
-    # spez. Emissionen in g/kWh
-    # Quelle für spez. Emissionen von PV und Biomasse:
-    # https://www.ipcc.ch/site/assets/uploads/2018/02/ipcc_wg3_ar5_annex-iii.pdf
-    # Seite 1335
-    # Quelle für spez. Emissionen von Netzbezug (Durchschnittswert aus 2023):
-    # https://www.umweltbundesamt.de/themen/co2-emissionen-pro-kilowattstunde-strom-2023
-    emissions_sp_pv = 41
-    emissions_sp_biomass_AC = 230
-    emissions_sp_grid = 380
-    emissionen_leitungen = 0
-
-    emissions_abs_pv = production_pv * emissions_sp_pv
-    emissions_abs_grid = production_grid * emissions_sp_grid
-    emissions_load_minus_pv_grid = load_minus_pv_grid * emissions_sp_biomass_AC
-
-    # abs. emissionen in kg (MWh*(g/kWh) = kg)
-    emissions_total = (
-        emissions_load_minus_pv_grid + emissions_abs_pv + emissions_abs_grid
-    )
-    return emissions_total
-
-
 def calc_autarkiegrad(network):
     pv = network.generators[network.generators.carrier == "PV"]
     pv_gen = network.generators_t.p[pv.index].sum(axis=1)
@@ -289,9 +209,7 @@ def calc_autarkiegrad(network):
 def calc_pv_share_of_load(network):
     if network.snapshots[1] - network.snapshots[0] == pd.Timedelta(minutes=5):
         res = 12
-    elif network.snapshots[1] - network.snapshots[0] == pd.Timedelta(
-        minutes=15
-    ):
+    elif network.snapshots[1] - network.snapshots[0] == pd.Timedelta(minutes=15):
         res = 4
     else:
         res = 1
@@ -307,9 +225,7 @@ def calc_pv_share_of_load(network):
     )
 
     load_ies = (
-        network.loads_t.p_set[
-            network.loads[network.loads.carrier == "AC"].index
-        ]
+        network.loads_t.p_set[network.loads[network.loads.carrier == "AC"].index]
         .groupby(np.arange(len(network.snapshots)) // res)
         .mean()
         .sum()
@@ -323,6 +239,77 @@ def calc_pv_share_of_load(network):
     pv_share_of_load = (production_pv / load_ies) * 100
 
     return pv_share_of_load
+
+
+def calc_ghg_emissions(network):
+    if network.snapshots[1] - network.snapshots[0] == pd.Timedelta(minutes=5):
+        res = 12
+    elif network.snapshots[1] - network.snapshots[0] == pd.Timedelta(minutes=15):
+        res = 4
+    else:
+        res = 1
+
+    # Energiemengen in MWh
+
+    production_pv = (
+        network.generators_t.p[
+            network.generators[network.generators.carrier == "PV"].index
+        ]
+        .groupby(np.arange(len(network.snapshots)) // res)
+        .mean()
+        .sum()
+        .sum()
+    )
+
+    production_grid = (
+        network.generators_t.p["NeAn"]
+        .groupby(np.arange(len(network.snapshots)) // res)
+        .mean()
+        .sum()
+    )
+
+    load_ies = (
+        network.loads_t.p_set[network.loads[network.loads.carrier == "AC"].index]
+        .groupby(np.arange(len(network.snapshots)) // res)
+        .mean()
+        .sum()
+        .sum()
+        - network.loads_t.p_set["EV_el"]
+        .groupby(np.arange(len(network.snapshots)) // res)
+        .mean()
+        .sum()
+        + network.storage_units_t.p.sum()
+    )
+
+    load_minus_pv_grid = load_ies - production_pv - production_grid
+
+    # spez. Emissionen in g/kWh
+    # Quelle für spez. Emissionen von PV und Biomasse:
+    # https://www.ipcc.ch/site/assets/uploads/2018/02/ipcc_wg3_ar5_annex-iii.pdf
+    # Seite 1335
+    # Quelle für spez. Emissionen von Netzbezug (Durchschnittswert aus 2023):
+    # https://www.umweltbundesamt.de/themen/co2-emissionen-pro-kilowattstunde-strom-2023
+    # Quelle für spez. Emissionen Leitungen:
+    # https://www.diva-portal.org/smash/get/diva2:1704254/FULLTEXT01.pdf
+    # Seite 30
+    emissions_sp_pv = 41
+    emissions_sp_biomass_AC = 230
+    emissions_sp_grid = 380
+    emissionen_leitungen = 15  # kg*CO2/m
+
+    emissions_abs_pv = production_pv * emissions_sp_pv
+    emissions_abs_grid = production_grid * emissions_sp_grid
+    emissions_load_minus_pv_grid = load_minus_pv_grid * emissions_sp_biomass_AC
+    emissions_lines = emissionen_leitungen * (network.lines.length.sum() * 1000)
+
+    # abs. emissionen in kg (MWh*(g/kWh) = kg)
+    emissions_total = (
+        emissions_load_minus_pv_grid
+        + emissions_abs_pv
+        + emissions_abs_grid
+        + emissions_lines
+    )
+    return emissions_total
 
 
 def calc_results(network):
@@ -347,35 +334,36 @@ def calc_results(network):
             "Ausbau Wärmespeicher",
             # "Ausbau Gasspeicher",
             "Betriebskosten: ",
-            "Erträge aus Trocknungsanlage",
-            "Erträge aus Netzeinspeisung",
             "Kosten aus Netzbezug",
             "Kosten aus Betrieb der BHKWs (inklusive Biogas)",
-            "Betrieb: ",
+            "Erträge aus Trocknungsanlage",
+            "Erträge aus Netzeinspeisung",
+            "Betrieb BGA: ",
             "Biogaserzeugung",
-            "elektrischer Eigenverbrauch BGA",
-            "elektrische Last IES",
-            "- Anschlussnehmer*innen",
-            "- Ladesäulen E-Mobilität",
-            "Erzeugung aus PV-Anlagen",
             "Erzeugung durch BHKW - Strom",
-            "Netzbezug",
+            "elektrischer Eigenverbrauch BGA",
             "Netzeinspeisung",
+            "Erzeugung durch BHKW - Wärme",
+            "Erzeugung durch Spitzenlastkessel",
             "Wärmelast (Wärmenetz)",
             "Eigenverbrauch Wärme BGA",
             "Last der Trocknungsanlage",
             "restliche Abwärme",
-            "Erzeugung durch BHKW - Wärme",
-            "Erzeugung durch Spitzenlastkessel",
-            "Treibhausgasemissionen Stromversorgung IES",
-            "Anteil der Stunden mit Lastdeckung durch PV",
-            "Anteil PV an Stromversorgung IES",
-            "Nutzung von Flexibilitäten:",
+            "Betrieb IES: ",
+            "elektrische Last IES",
+            "- Anschlussnehmer*innen",
+            "- Ladesäulen E-Mobilität",
+            "Netzbezug",
+            "Stromversorgung durch BGA",
+            "Erzeugung aus PV-Anlagen",
             "Batteriespeichernutzung (Ausspeicherung)",
             "E-Mobilität - durchschnittliches Potential",
             "E-Mobilität - Nutzung",
             "DSM - durchschnittliches Potential",
             "DSM - Nutzung",
+            "Anteil der Stunden mit Lastdeckung durch PV",
+            "Anteil PV an Stromversorgung IES",
+            "Treibhausgasemissionen Stromversorgung IES",
         ],
     )
 
@@ -399,9 +387,7 @@ def calc_results(network):
     results.Einheit[results.index.str.contains("Nutzung")] = "kWh"
     results.Einheit[results.index.str.contains("nutzung")] = "kWh"
     results.Einheit[
-        results.index.str.contains(
-            "Treibhausgasemissionen Stromversorgung IES"
-        )
+        results.index.str.contains("Treibhausgasemissionen Stromversorgung IES")
     ] = "kg C02e"
     results.Einheit[results.index.str.contains("Anteil")] = "%"
     results.Einheit[results.index.str.contains(":")] = "-"
@@ -412,9 +398,7 @@ def calc_results(network):
 
     if network.snapshots[1] - network.snapshots[0] == pd.Timedelta(minutes=5):
         res = 12
-    elif network.snapshots[1] - network.snapshots[0] == pd.Timedelta(
-        minutes=15
-    ):
+    elif network.snapshots[1] - network.snapshots[0] == pd.Timedelta(minutes=15):
         res = 4
     else:
         res = 1
@@ -435,9 +419,7 @@ def calc_results(network):
         sum(invest[0]) + invest[1] + sum(invest[2]) + invest[3]
     )
 
-    results.Wert["annualisierte Investkosten elektrisches Netz"] = sum(
-        invest[0]
-    )
+    results.Wert["annualisierte Investkosten elektrisches Netz"] = sum(invest[0])
 
     results.Wert["annualisierte Investkosten PV-Anlagen"] = invest[3]
 
@@ -447,31 +429,23 @@ def calc_results(network):
 
     # results.Wert["annualisierte Investkosten Biogasspeicher"] = invest[2][2]
 
-    results.Wert["annualisierte Investkosten diverser Link-Komponenten"] = (
-        invest[1]
-    )
+    results.Wert["annualisierte Investkosten diverser Link-Komponenten"] = invest[1]
 
     # marginale Kosten
 
     results.Wert["annualisierte marginale Kosten"] = marg
 
-    results.Wert["Erträge aus Trocknungsanlage"] = network.links_t.p0[
-        "TA"
-    ].groupby(np.arange(len(network.snapshots)) // res).mean().sum() * (
-        network.links.loc["TA"].marginal_cost
-    )
+    results.Wert["Erträge aus Trocknungsanlage"] = network.links_t.p0["TA"].groupby(
+        np.arange(len(network.snapshots)) // res
+    ).mean().sum() * (network.links.loc["TA"].marginal_cost)
 
-    results.Wert["Erträge aus Netzeinspeisung"] = network.links_t.p0[
-        "NA_Sp"
-    ].groupby(np.arange(len(network.snapshots)) // res).mean().sum() * (
-        network.links.loc["NA_Sp"].marginal_cost
-    )
+    results.Wert["Erträge aus Netzeinspeisung"] = network.links_t.p0["NA_Sp"].groupby(
+        np.arange(len(network.snapshots)) // res
+    ).mean().sum() * (network.links.loc["NA_Sp"].marginal_cost)
 
-    results.Wert["Kosten aus Netzbezug"] = network.generators_t.p[
-        "NeAn"
-    ].groupby(np.arange(len(network.snapshots)) // res).mean().sum() * (
-        network.generators.loc["NeAn"].marginal_cost
-    )
+    results.Wert["Kosten aus Netzbezug"] = network.generators_t.p["NeAn"].groupby(
+        np.arange(len(network.snapshots)) // res
+    ).mean().sum() * (network.generators.loc["NeAn"].marginal_cost)
 
     results.Wert["Kosten aus Betrieb der BHKWs (inklusive Biogas)"] = (
         network.generators_t.p["BGA1"]
@@ -485,9 +459,7 @@ def calc_results(network):
         .sum()
         * (network.generators.loc["BGA2"].marginal_cost)
         + (
-            network.links_t.p0[
-                network.links[network.links.carrier == "KWK_AC"].index
-            ]
+            network.links_t.p0[network.links[network.links.carrier == "KWK_AC"].index]
             .groupby(np.arange(len(network.snapshots)) // res)
             .mean()
             .sum()
@@ -537,12 +509,89 @@ def calc_results(network):
     )[network.stores.index == "GSp"].sum()
     results.Einheit["Ausbau Gasspeicher"] = "MWh"'''
 
-    # Systemversorgung
+    # Betrieb BGA
+
+    results.Wert["Biogaserzeugung"] = (
+        network.generators_t.p["BGA1"]
+        .groupby(np.arange(len(network.snapshots)) // res)
+        .mean()
+        .sum()
+        + network.generators_t.p["BGA2"]
+        .groupby(np.arange(len(network.snapshots)) // res)
+        .mean()
+        .sum()
+    )
+
+    results.Wert["Erzeugung durch BHKW - Strom"] = abs(
+        network.links_t.p1[network.links[network.links.carrier == "KWK_AC"].index]
+        .groupby(np.arange(len(network.snapshots)) // res)
+        .mean()
+        .sum()
+        .sum()
+    )
+
+    results.Wert["Netzeinspeisung"] = (
+        network.links_t.p0["NA_Sp"]
+        .groupby(np.arange(len(network.snapshots)) // res)
+        .mean()
+        .sum()
+    )
+
+    results.Wert["elektrischer Eigenverbrauch BGA"] = (
+        network.loads_t.p_set["EV_el"]
+        .groupby(np.arange(len(network.snapshots)) // res)
+        .mean()
+        .sum()
+    )
+
+    results.Wert["Erzeugung durch BHKW - Wärme"] = abs(
+        network.links_t.p1[network.links[network.links.carrier == "KWK_heat"].index]
+        .groupby(np.arange(len(network.snapshots)) // res)
+        .mean()
+        .sum()
+        .sum()
+    )
+
+    results.Wert["Erzeugung durch Spitzenlastkessel"] = (
+        network.generators_t.p["SpK"]
+        .groupby(np.arange(len(network.snapshots)) // res)
+        .mean()
+        .sum()
+    )
+
+    results.Wert["Eigenverbrauch Wärme BGA"] = (
+        network.loads_t.p_set["EV_W"]
+        .groupby(np.arange(len(network.snapshots)) // res)
+        .mean()
+        .sum()
+    )
+
+    results.Wert["Last der Trocknungsanlage"] = (
+        network.links_t.p0["TA"]
+        .groupby(np.arange(len(network.snapshots)) // res)
+        .mean()
+        .sum()
+    )
+
+    results.Wert["restliche Abwärme"] = (
+        network.links_t.p0["Abw"]
+        .groupby(np.arange(len(network.snapshots)) // res)
+        .mean()
+        .sum()
+    )
+
+    results.Wert["Wärmelast (Wärmenetz)"] = (
+        network.loads_t.p_set["WL"]
+        .groupby(np.arange(len(network.snapshots)) // res)
+        .mean()
+        .sum()
+        .sum()
+    )
+
+    # Systemversorgung IES
 
     results.Wert["elektrische Last IES"] = (
-        network.loads_t.p_set[
-            network.loads[network.loads.carrier == "AC"].index
-        ]
+        network.loads_t.p_set[network.loads[network.loads.carrier == "AC"].index]
         .groupby(np.arange(len(network.snapshots)) // res)
         .mean()
         .sum()
@@ -554,9 +603,7 @@ def calc_results(network):
     )
 
     results.Wert["- Anschlussnehmer*innen"] = (
-        network.loads_t.p_set[
-            network.loads[network.loads.carrier == "AC"].index
-        ]
+        network.loads_t.p_set[network.loads[network.loads.carrier == "AC"].index]
         .groupby(np.arange(len(network.snapshots)) // res)
         .mean()
         .sum()
@@ -586,28 +633,6 @@ def calc_results(network):
         .sum()
     )
 
-    results.Wert["elektrischer Eigenverbrauch BGA"] = (
-        network.loads_t.p_set["EV_el"]
-        .groupby(np.arange(len(network.snapshots)) // res)
-        .mean()
-        .sum()
-    )
-
-    results.Wert["Wärmelast (Wärmenetz)"] = (
-        network.loads_t.p_set["WL"]
-        .groupby(np.arange(len(network.snapshots)) // res)
-        .mean()
-        .sum()
-        .sum()
-    )
-
-    results.Wert["Eigenverbrauch Wärme BGA"] = (
-        network.loads_t.p_set["EV_W"]
-        .groupby(np.arange(len(network.snapshots)) // res)
-        .mean()
-        .sum()
-    )
-
     results.Wert["Erzeugung aus PV-Anlagen"] = (
         network.generators_t.p[
             network.generators[network.generators.carrier == "PV"].index
@@ -618,47 +643,6 @@ def calc_results(network):
         .sum()
     )
 
-    results.Wert["Erzeugung durch BHKW - Strom"] = abs(
-        network.links_t.p1[
-            network.links[network.links.carrier == "KWK_AC"].index
-        ]
-        .groupby(np.arange(len(network.snapshots)) // res)
-        .mean()
-        .sum()
-        .sum()
-    )
-
-    results.Wert["Erzeugung durch BHKW - Wärme"] = abs(
-        network.links_t.p1[
-            network.links[network.links.carrier == "KWK_heat"].index
-        ]
-        .groupby(np.arange(len(network.snapshots)) // res)
-        .mean()
-        .sum()
-        .sum()
-    )
-
-    results.Wert["Erzeugung durch Spitzenlastkessel"] = (
-        network.generators_t.p["SpK"]
-        .groupby(np.arange(len(network.snapshots)) // res)
-        .mean()
-        .sum()
-    )
-
-    results.Wert["Last der Trocknungsanlage"] = (
-        network.links_t.p0["TA"]
-        .groupby(np.arange(len(network.snapshots)) // res)
-        .mean()
-        .sum()
-    )
-
-    results.Wert["restliche Abwärme"] = (
-        network.links_t.p0["Abw"]
-        .groupby(np.arange(len(network.snapshots)) // res)
-        .mean()
-        .sum()
-    )
-
     results.Wert["Netzbezug"] = (
         network.generators_t.p["NeAn"]
         .groupby(np.arange(len(network.snapshots)) // res)
@@ -666,55 +650,38 @@ def calc_results(network):
         .sum()
     )
 
-    results.Wert["Netzeinspeisung"] = (
-        network.links_t.p0["NA_Sp"]
-        .groupby(np.arange(len(network.snapshots)) // res)
-        .mean()
-        .sum()
+    # Beachte: Berücksichtigung von Verlusten durch BSp
+    results.Wert["Stromversorgung durch BGA"] = (
+        results.Wert["elektrische Last IES"]
+        - results.Wert["Netzbezug"]
+        - results.Wert["Erzeugung aus PV-Anlagen"]
+        + network.storage_units_t.p.sum()
     )
 
-    results.Wert["Biogaserzeugung"] = (
-        network.generators_t.p["BGA1"]
-        .groupby(np.arange(len(network.snapshots)) // res)
-        .mean()
-        .sum()
-        + network.generators_t.p["BGA2"]
-        .groupby(np.arange(len(network.snapshots)) // res)
-        .mean()
-        .sum()
-    )
+    # autarkiegrad / Treibhausgasemissionen
 
-    results.Wert["Treibhausgasemissionen Stromversorgung IES"] = (
-        calc_ghg_emissions(network)
-    )
-
-    results.Wert["Anteil der Stunden mit Lastdeckung durch PV"] = (
-        calc_autarkiegrad(network)
-    )
-
-    results.Wert["Anteil PV an Stromversorgung IES"] = calc_pv_share_of_load(
+    results.Wert["Treibhausgasemissionen Stromversorgung IES"] = calc_ghg_emissions(
         network
     )
 
+    results.Wert["Anteil der Stunden mit Lastdeckung durch PV"] = calc_autarkiegrad(
+        network
+    )
+
+    results.Wert["Anteil PV an Stromversorgung IES"] = calc_pv_share_of_load(network)
+
     # Nutzung von Flexibilitäten
-    
-    results.Wert["Batteriespeichernutzung (Ausspeicherung)"] = (
-        battery_usage(network))
 
-    results.Wert["DSM - durchschnittliches Potential"] = (
-        dsm_potential_usage(network)[0]
-    )
+    results.Wert["Batteriespeichernutzung (Ausspeicherung)"] = battery_usage(network)
 
-    results.Wert["DSM - Nutzung"] = (
-        dsm_potential_usage(network)[1]
-    )
+    results.Wert["DSM - durchschnittliches Potential"] = dsm_potential_usage(network)[0]
 
-    results.Wert["E-Mobilität - durchschnittliches Potential"] = (
-        emob_potential_usage(network)[0]
-    )
+    results.Wert["DSM - Nutzung"] = dsm_potential_usage(network)[1]
 
-    results.Wert["E-Mobilität - Nutzung"] = (
-        emob_potential_usage(network)[1]
-    )
+    results.Wert["E-Mobilität - durchschnittliches Potential"] = emob_potential_usage(
+        network
+    )[0]
+
+    results.Wert["E-Mobilität - Nutzung"] = emob_potential_usage(network)[1]
 
     return results
