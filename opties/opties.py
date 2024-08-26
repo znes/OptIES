@@ -93,3 +93,5 @@ network = adapt_settings(network, args)
 optimization(network, args)
 
 results = calc_results(network)
+
+results.to_csv(args["csv_export"] + "results.csv")

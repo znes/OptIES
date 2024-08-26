@@ -191,34 +191,30 @@ def create_pypsa_network(
 
     if use_real_data:
         if temporal == "5min":
-            network.set_snapshots(
-                pd.date_range("2023-02-14 00:00", "2024-02-13 23:55", freq="5min")
-            )
+            args["start_hour"] = args["start_hour"] * 12
+            args["end_hour"] = args["end_hour"] * 12
+            sns = pd.date_range("2023-02-14 00:00", "2024-02-13 23:55", freq="5min")
+            network.set_snapshots(sns[args["start_hour"] - 1 : args["end_hour"]])
             network.snapshot_weightings.objective = 1 / 12
             network.snapshot_weightings.stores = 1 / 12
             network.snapshot_weightings.generators = 1 / 12
-            args["start_hour"] = args["start_hour"] * 12
-            args["end_hour"] = args["end_hour"] * 12
 
         elif temporal == "15min":
-            network.set_snapshots(
-                pd.date_range("2023-02-14 00:00", "2024-02-13 23:45", freq="15min")
-            )
+            args["start_hour"] = args["start_hour"] * 4
+            args["end_hour"] = args["end_hour"] * 4
+            sns = pd.date_range("2023-02-14 00:00", "2024-02-13 23:45", freq="15min")
+            network.set_snapshots(sns[args["start_hour"] - 1 : args["end_hour"]])
             network.snapshot_weightings.objective = 1 / 4
             network.snapshot_weightings.stores = 1 / 4
             network.snapshot_weightings.generators = 1 / 4
-            args["start_hour"] = args["start_hour"] * 4
-            args["end_hour"] = args["end_hour"] * 4
 
         else:
-            network.set_snapshots(
-                pd.date_range("2023-02-14 00:00", "2024-02-13 23:00", freq="H")
-            )
+            sns = pd.date_range("2023-02-14 00:00", "2024-02-13 23:00", freq="H")
+            network.set_snapshots(sns[args["start_hour"] - 1 : args["end_hour"]])
 
     else:
-        network.set_snapshots(
-            pd.date_range("2019-01-01 00:00", "2019-12-31 23:00", freq="H")
-        )
+        sns = pd.date_range("2019-01-01 00:00", "2019-12-31 23:00", freq="H")
+        network.set_snapshots(sns[args["start_hour"] - 1 : args["end_hour"]])
 
     # Buses
 

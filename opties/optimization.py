@@ -99,7 +99,7 @@ def run_lopf(network, args, extra_functionality):
     end = args["end_hour"]
 
     network.lopf(
-        snapshots=network.snapshots[start:end],
+        snapshots=network.snapshots,  # [start:end],
         pyomo=args["method"]["pyomo"],
         solver_name=args["solver_name"],
         solver_options=args["solver_options"],
@@ -249,7 +249,7 @@ def kwk_constraints_pyomo(n, sns):
         )
 
 
-def trocknungsanlage_nmp(n, sns):
+def trocknungsanlage_nmp(n, sns, val):
     store_e = get_var(n, "Store", "e").loc[sns[-1]]
 
     lhs = linexpr(
@@ -261,16 +261,16 @@ def trocknungsanlage_nmp(n, sns):
         n,
         lhs,
         "==",
-        2976,
+        val,
         "Store_TA",
         "load_trocknungsanlage",
     )
 
 
-def trocknungsanlage_pyomo(n, sns):
+def trocknungsanlage_pyomo(n, sns, val):
     def load_trocknungsanlage(model, snapshot):
         lhs = n.model.store_e["TA", snapshot]
-        rhs = 2976
+        rhs = val
 
         return lhs == rhs
 
@@ -288,10 +288,13 @@ class Constraints:
     def extra_functionalities(self, network, snapshots):
         args = self.args
 
+        # Verbrauch der Trocknungsanlage je nach berechnetem Zeitraum
+        val_ta = 2976 * (len(network.snapshots) / 8760)
+
         if args["method"]["pyomo"]:
             kwk_constraints_pyomo(network, snapshots)
-            trocknungsanlage_pyomo(network, snapshots)
+            trocknungsanlage_pyomo(network, snapshots, val_ta)
 
         else:
             kwk_constraints_nmp(network, snapshots)
-            trocknungsanlage_nmp(network, snapshots)
+            trocknungsanlage_nmp(network, snapshots, val_ta)
