@@ -278,7 +278,7 @@ def calc_ghg_emissions(network):
         .groupby(np.arange(len(network.snapshots)) // res)
         .mean()
         .sum()
-        + network.storage_units_t.p.sum()
+        + network.storage_units_t.p.sum().sum()
     )
 
     load_minus_pv_grid = load_ies - production_pv - production_grid
@@ -292,6 +292,8 @@ def calc_ghg_emissions(network):
     # Quelle für spez. Emissionen Leitungen:
     # https://www.diva-portal.org/smash/get/diva2:1704254/FULLTEXT01.pdf
     # Seite 30
+    # pitzenlastkessel etwa 500 kg CO2/kWh
+    # https://researchbriefings.files.parliament.uk/documents/POST-PN-0523/POST-PN-0523.pdf
     emissions_sp_pv = 41
     emissions_sp_biomass_AC = 230
     emissions_sp_grid = 380
@@ -382,6 +384,7 @@ def calc_results(network):
     results.Einheit[results.index.str.contains("restlich")] = "MWh"
     results.Einheit[results.index.str.contains("Erzeugung")] = "MWh"
     results.Einheit[results.index.str.contains("erzeugung")] = "MWh"
+    results.Einheit[results.index.str.contains("versorgung")] = "MWh"
     results.Einheit[results.index.str.contains("rel.")] = "p.u."
     results.Einheit[results.index.str.contains("Potential")] = "kW"
     results.Einheit[results.index.str.contains("Nutzung")] = "kWh"
@@ -655,7 +658,7 @@ def calc_results(network):
         results.Wert["elektrische Last IES"]
         - results.Wert["Netzbezug"]
         - results.Wert["Erzeugung aus PV-Anlagen"]
-        + network.storage_units_t.p.sum()
+        + network.storage_units_t.p.sum().sum()
     )
 
     # autarkiegrad / Treibhausgasemissionen
