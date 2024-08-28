@@ -43,12 +43,13 @@ args = {
     "temporal_resolution": "hourly",  #  {'5min', '15min', 'hourly'}, for synth. only hourly
     "start_hour": 1,
     "end_hour": 8760,
-    "grid_extension": {
-        "extension": True,
-        "postEEG": True,
-        },
     "flexible_components": {},  # {'emob', 'dsm'}, # {emob, dsm, biogas-remuneration}, only hourly
-    "extendable_components": {},  # {'el_lines', 'pv', 'battery', 'heat-store'}
+    "extendable_components": {},  # {'el_lines', 'pv', 'batteries', 'heat-store'}
+    "IES_extension": {
+        "extension": False,  # lines will be extendable
+        "postEEG": False,  # only postEEG-capacities
+        "electrolyser-prio": False,
+    },
     "method": {
         "type": "lopf",
         "n_iter": 1,
