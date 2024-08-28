@@ -328,6 +328,35 @@ def create_pypsa_network(
             capital_cost=link.capital_cost,
         )
 
+    
+    # heat pump
+    
+    def cop(t_source, t_sink=55):
+        delta_t = t_sink - t_source
+        return 6.81 - 0.121 * delta_t + 0.000630 * delta_t**2
+        
+    url = "https://tubcloud.tu-berlin.de/s/S4jRAQMP5Te96jW/download/ninja_weather_country_DE_merra-2_population_weighted.csv"
+    temp = pd.read_csv(url, skiprows=2, index_col=0, parse_dates=True).loc[
+    "2014", "temperature"]
+    
+    mean_cop = cop(temp).mean()
+    #cop(temp).plot(figsize=(10, 2), ylabel="COP");
+     
+    network.add(
+    "Link",
+    name="heat_pump",
+    carrier="heat",
+    bus0="IES",
+    bus1="BGA_W",
+    p_nom=100,
+    p_nom_min=0,
+    efficiency= mean_cop, #cop(temp),
+    p_nom_extendable=True,
+    marginal_cost=100,
+    capital_cost=0,  # €/MWe/a
+)
+    
+    
     # Loads
 
     for i in range(0, len(loads)):

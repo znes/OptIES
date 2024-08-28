@@ -60,7 +60,7 @@ args = {
         "method": 2,
         "BarHomogeneous": 1,
     },
-    "csv_export": "opties_results/",
+    "csv_export": "opties_results3/",
 }
 
 
