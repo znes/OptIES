@@ -40,9 +40,9 @@ __author__ = "KathiEsterl"
 
 def import_data(args):
     path = args["path"]
-    
-    if args["grid_extension"]["extension"]:
-        path = "data_extension/"
+
+    if args["IES_extension"]["extension"]:
+        path = args["path"] + "/extension/"
 
     buses = pd.read_csv(path + "buses.csv").set_index("name")
     if "geometry" in buses.columns:
@@ -55,22 +55,21 @@ def import_data(args):
     stores = pd.read_csv(path + "stores.csv").set_index("name")
     links = pd.read_csv(path + "links.csv").set_index("name")
     loads = pd.read_csv(path + "loads.csv").set_index("name")
-    
-    if args["grid_extension"]["postEEG"]:
+
+    if args["IES_extension"]["postEEG"]:
         generators = pd.read_csv(path + "generatorsIES2_nachEEG.csv").set_index("name")
         links = pd.read_csv(path + "links_IES2_nachEEG.csv").set_index("name")
+
     return buses, lines, generators, storage_units, stores, links, loads
 
 
 def import_timeseries(args):
-    path = args["path"] +"timeseries/"
+    path = args["path"] + "timeseries/"
     use_real_data = args["use_real_data"]
     temporal = args["temporal_resolution"]
-    
-    if args["grid_extension"]["extension"]:
-        path = "data_extension/timeseries/"
 
-    
+    if args["IES_extension"]["extension"]:
+        path = args["path"] + "/extension/timeseries/"
 
     if use_real_data:
         # anpassen der network snapshots sowie der synthetischen Zeitreihen
@@ -117,8 +116,9 @@ def import_timeseries(args):
         pvgen = pvgen.append(pvgen[:1056], ignore_index=True)
         pvgen = pvgen.drop(pvgen.index[:1056])
         pv = pd.Series(data=pvgen["p_max_pu"].values.repeat(res), index=index)
-        
+
         wind = None
+
     else:
         if temporal != "hourly":
             print(" ")
@@ -135,8 +135,6 @@ def import_timeseries(args):
             el_loads.index = pd.date_range(
                 "2019-01-01 00:00", "2019-12-31 23:00", freq="H"
             )
-            
-
 
         else:
             el_loads = pd.read_csv(path + "el_load_synth.csv").set_index("time")
@@ -157,16 +155,16 @@ def import_timeseries(args):
             pv["p_max_pu"].values,
             index=pd.date_range("2019-01-01 00:00", "2019-12-31 23:00", freq="H"),
         )
-         
+
         wind = None
-        
-        if args["grid_extension"]["extension"]:       
-            wind = pd.read_csv(path + "wind_timeseries_full.csv", sep=',')
+
+        if args["IES_extension"]["extension"]:
+            wind = pd.read_csv(path + "wind_timeseries_full.csv", sep=",")
             wind = pd.Series(
                 wind["p_max_pu"].values,
                 index=pd.date_range("2019-01-01 00:00", "2019-12-31 23:00", freq="H"),
             )
-            
+
     return el_loads, heat_load, gas_load, pv, wind
 
 
@@ -506,7 +504,10 @@ def dsm_potentials(network):
 
     # 2) weitere AN (normale Haushalte)
 
-    an = network.loads.index[network.loads.index.str.startswith("AN","KN")]
+    an = network.loads.index[
+        network.loads.index.str.startswith("AN")
+        | network.loads.index.str.startswith("KN")
+    ]
     # an = an.drop('AN1')
 
     ## zeitabhängige Potentiale verschiedener Anwendungen berechnen
@@ -589,6 +590,28 @@ def dsm_potentials(network):
 
 
 def adapt_settings(network, args):
+    if args["IES_extension"]["extension"]:
+        print(" ")
+        print(
+            "Hinweis: Bei der Erweiterung des IES um den Ortsteil Dörpum werden die elekrischen Leitungen ausbaubar abgebildet."
+        )
+        print(" ")
+
+        if args["IES_extension"]["electrolyser-prio"]:
+            print(" ")
+            print(
+                "Hinweis: Bei der Priorisierung der Bedienung des Elektrolyseurs, wird automatisch ein Batteriespeicher am Elektroöyseur mit optimiert."
+            )
+            print(" ")
+            network.add(
+                "Load",
+                name="H2",
+                carrier="AC",
+                bus="Wind_Gen",
+                p_set=pd.Series(index=network.snapshots, data=0.025),
+            )
+            network.storage_units.at["BSp_Wind", "p_nom_extendable"] = True
+
     # Flexibilitätspotentiale
 
     if "emob" in args["flexible_components"]:
@@ -602,14 +625,20 @@ def adapt_settings(network, args):
     if "el_lines" in args["extendable_components"]:
         network.lines.s_nom_extendable = True
 
+    if "wind" in args["extendable_components"]:
+        network.generators.loc[
+            network.generators[network.generators.carrier == "Wind"].index,
+            "p_nom_extendable",
+        ] = True
+
     if "pv" in args["extendable_components"]:
         network.generators.loc[
             network.generators[network.generators.carrier == "PV"].index,
             "p_nom_extendable",
         ] = True
 
-    if "battery" in args["extendable_components"]:
-        network.storage_units.at["BSp", "p_nom_extendable"] = True
+    if "batteries" in args["extendable_components"]:
+        network.storage_units.p_nom_extendable = True
 
     if "heat-store" in args["extendable_components"]:
         network.stores.at["WSp", "e_nom_extendable"] = True
