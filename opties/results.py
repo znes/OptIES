@@ -189,16 +189,36 @@ def emob_potential_usage(network):
 
 
 def calc_autarkiegrad(network):
-    pv = network.generators[network.generators.carrier == "PV"]
-    pv_gen = network.generators_t.p[pv.index].sum(axis=1)
+    if network.snapshots[1] - network.snapshots[0] == pd.Timedelta(minutes=5):
+        res = 12
+    elif network.snapshots[1] - network.snapshots[0] == pd.Timedelta(minutes=15):
+        res = 4
+    else:
+        res = 1
 
-    loads = network.loads[
-        (network.loads.carrier == "AC") & (network.loads.bus != "BGA_AC")
-    ]
-    network.loads_t.p_set[loads.index]
-    sum_loads = network.loads_t.p_set[loads.index].sum(axis=1)
+    pv_gen = (
+        network.generators_t.p[
+            network.generators[network.generators.carrier == "PV"].index
+        ]
+        .groupby(np.arange(len(network.snapshots)) // res)
+        .mean()
+        .sum(axis=1)
+    )
 
-    diff = pv_gen >= sum_loads
+    loads = (
+        network.loads_t.p_set[
+            network.loads[
+                network.loads.index.str.startswith("AN")
+                | network.loads.index.str.startswith("LS")
+                | network.loads.index.str.startswith("KN")
+            ].index
+        ]
+        .groupby(np.arange(len(network.snapshots)) // res)
+        .mean()
+        .sum(axis=1)
+    )
+
+    diff = pv_gen >= loads
     diff.value_counts(True)
 
     share_of_autarkic_hours = (diff.value_counts()[1] / 8760) * 100
@@ -225,14 +245,16 @@ def calc_pv_share_of_load(network):
     )
 
     load_ies = (
-        network.loads_t.p_set[network.loads[network.loads.carrier == "AC"].index]
+        network.loads_t.p_set[
+            network.loads[
+                network.loads.index.str.startswith("AN")
+                | network.loads.index.str.startswith("LS")
+                | network.loads.index.str.startswith("KN")
+            ].index
+        ]
         .groupby(np.arange(len(network.snapshots)) // res)
         .mean()
         .sum()
-        .sum()
-        - network.loads_t.p_set["EV_el"]
-        .groupby(np.arange(len(network.snapshots)) // res)
-        .mean()
         .sum()
     )
 

@@ -57,7 +57,7 @@ def import_data(args):
 
 
 def import_timeseries(args):
-    path = args["path"]  # +"timeseries/"
+    path = args["path"]+"timeseries/"
     use_real_data = args["use_real_data"]
     temporal = args["temporal_resolution"]
 
