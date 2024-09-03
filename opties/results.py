@@ -230,7 +230,6 @@ def calc_autarkiegrad(network):
     )
 
     diff = gen >= loads
-
     diff.value_counts(True)
 
     share_of_autarkic_hours = (diff.value_counts()[1] / 8760) * 100
