@@ -52,7 +52,7 @@ args = {
     },
     "method": {
         "type": "lopf",
-        "n_iter": 1,
+        "n_iter": 4,
         "pyomo": True,
     },
     "solver_name": "gurobi",
