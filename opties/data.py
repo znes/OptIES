@@ -42,7 +42,7 @@ def import_data(args):
     path = args["path"]
 
     if args["IES_extension"]["extension"]:
-        path = args["path"] + "/extension/"
+        path = args["path"] + "data_extension/"
 
     buses = pd.read_csv(path + "buses.csv").set_index("name")
     if "geometry" in buses.columns:
@@ -69,7 +69,7 @@ def import_timeseries(args):
     temporal = args["temporal_resolution"]
 
     if args["IES_extension"]["extension"]:
-        path = args["path"] + "/extension/timeseries/"
+        path = args["path"] + "data_extension/timeseries/"
 
     if use_real_data:
         # anpassen der network snapshots sowie der synthetischen Zeitreihen
@@ -341,7 +341,8 @@ def create_pypsa_network(
             marginal_cost=sto.marginal_cost,
             capital_cost=sto.capital_cost,
         )
-
+        
+   
     # Links
 
     for i in range(0, len(links)):
@@ -359,7 +360,15 @@ def create_pypsa_network(
             marginal_cost=link.marginal_cost,
             capital_cost=link.capital_cost,
         )
+        
+    if args["IES_extension"]["electrolyser-extendable"]:
+        network.links.loc['PtH2', 'p_nom_extendable'] = True 
+        network.links.loc['PtH2', 'p_nom_min'] = 0 
+        network.links.loc['PtH2+heat', 'capital_cost'] = 46763    # Masterarbeit L. Zimmermann (annualized)
+        network.links.loc['PtH2+heat', 'p_nom'] = 0.25*(0.65/0.85)
 
+        
+    
     # Loads
 
     for i in range(0, len(loads)):
@@ -600,18 +609,11 @@ def adapt_settings(network, args):
         if args["IES_extension"]["electrolyser-prio"]:
             print(" ")
             print(
-                "Hinweis: Bei der Priorisierung der Bedienung des Elektrolyseurs, wird automatisch ein Batteriespeicher am Elektroöyseur mit optimiert."
+                "Hinweis: Bei der Priorisierung der Bedienung des Elektrolyseurs, wird automatisch ein Batteriespeicher am Elektrolyseur mit optimiert."
             )
             print(" ")
-            network.add(
-                "Load",
-                name="H2",
-                carrier="AC",
-                bus="Wind_Gen",
-                p_set=pd.Series(index=network.snapshots, data=0.025),
-            )
             network.storage_units.at["BSp_Wind", "p_nom_extendable"] = True
-
+            
     # Flexibilitätspotentiale
 
     if "emob" in args["flexible_components"]:

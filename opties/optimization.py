@@ -281,6 +281,55 @@ def trocknungsanlage_pyomo(n, sns, val):
     )
 
 
+def PtH2_priority_rule(network, snapshots):
+    def priority_rule(model,snapshot):
+        p_wind = network.generators_t.p_max_pu.loc[snapshot, 'WKA']
+        max_p = network.links.loc["PtH2"]["p_nom"]
+        
+        rhs = min(max_p, p_wind)
+        lhs = model.link_p["PtH2", snapshot] + model.link_p["PtH2+heat", snapshot] + model.link_p["PtH2+heat_heat", snapshot]
+        
+        return rhs == lhs
+    
+    setattr(
+        network.model,
+        "priority_rule",
+        Constraint(list(snapshots), rule=priority_rule),
+    )
+
+        
+def PtH2_capacity_limit(network, snapshots):
+    def PtH2_limit(model,snapshot):
+        lhs = model.link_p["PtH2", snapshot] + model.link_p["PtH2+heat", snapshot] + model.link_p["PtH2+heat_heat", snapshot] 
+        rhs =  network.links.loc["PtH2"]["p_nom"] 
+        
+        return lhs <= rhs 
+    
+    setattr(
+        network.model,
+        "PtH2_capacity_limit",
+        Constraint(list(snapshots), rule=PtH2_limit),
+    )
+
+def PtH2_waste_heat_constraint(network, snapshots):                     
+    def power_ratio(model, snapshot):
+
+        #ratio efficiency PtHeat / efficiency PtH2 
+        efficiency_heat = network.links.loc["PtH2+heat", "efficiency"] - network.links.loc["PtH2", "efficiency"] 
+        efficiency_ratio = efficiency_heat/network.links.loc["PtH2", "efficiency"] 
+        
+        lhs = model.link_p["PtH2+heat_heat", snapshot]         
+        rhs = efficiency_ratio * model.link_p["PtH2+heat", snapshot] 
+
+        return lhs == rhs      
+       
+    setattr(
+            network.model,
+            "power_ratio",
+            Constraint(list(snapshots), rule=power_ratio),      
+            )
+        
+
 class Constraints:
     def __init__(self, args):
         self.args = args
@@ -298,3 +347,15 @@ class Constraints:
         else:
             kwk_constraints_nmp(network, snapshots)
             trocknungsanlage_nmp(network, snapshots, val_ta)
+        
+        if args["IES_extension"]["electrolyser-prio"]:
+            PtH2_priority_rule(network, snapshots)
+        
+        if args["IES_extension"]["extension"]:
+            PtH2_waste_heat_constraint(network, snapshots)
+            PtH2_capacity_limit(network, snapshots)
+        if not args["IES_extension"]["electrolyser-extendable"]:
+            print('heyaaaa')
+            #PtH2_capacity_limit(network, snapshots)
+        
+            

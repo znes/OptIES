@@ -46,13 +46,14 @@ args = {
     "flexible_components": {},  # {'emob', 'dsm'}, # {emob, dsm, biogas-remuneration}, only hourly
     "extendable_components": {},  # {'el_lines', 'pv', 'batteries', 'heat-store'}
     "IES_extension": {
-        "extension": False,  # lines will be extendable
+        "extension": True,  # lines will be extendable
         "postEEG": False,  # only postEEG-capacities
-        "electrolyser-prio": False,
+        "electrolyser-prio": True,
+        "electrolyser-extendable": True, 
     },
     "method": {
         "type": "lopf",
-        "n_iter": 4,
+        "n_iter": 1,
         "pyomo": True,
     },
     "solver_name": "gurobi",

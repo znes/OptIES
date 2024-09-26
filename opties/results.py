@@ -389,13 +389,20 @@ def calc_results(network):
             " - Ausbau Batteriespeicher WKA",
             " - Ausbau Batteriespeicher Erweiterung",
             "Ausbau Wärmespeicher",
+            "Ausbau Abwärmenutzung (Elektrolyseur)",
             # "Ausbau Gasspeicher",
             "Betriebskosten: ",
             "Kosten aus Netzbezug",
             "Kosten aus Betrieb der BHKWs (inklusive Biogas)",
             "Erträge aus Trocknungsanlage",
             "Erträge aus Netzeinspeisung BGA",
-            "Erträge Elektrolyseurbetrieb",
+            "Erträge WKA/Elektrolyseurbetrieb", 
+            " - Erträge Elektrolyseurbetrieb",
+            " - Erträge Netzeinspeisung WKA",
+            "Erzeugung WKA/Elektrolyseur",
+            " - Erzeugung Wasserstoff",
+            " - Erzeugung Abwärme",
+            " - Netzeinspeisung WKA",
             "Betrieb BGA: ",
             "Biogaserzeugung",
             "Erzeugung durch BHKW - Strom",
@@ -512,14 +519,34 @@ def calc_results(network):
     )
 
     if len(network.generators[network.generators.carrier == "Wind"]) > 0:
-        results.Wert["Erträge Elektrolyseurbetrieb"] = network.links_t.p0[
+        results.Wert["Erträge WKA/Elektrolyseurbetrieb"] = network.links_t.p0[
             "NA_Wind"
         ].mul(network.snapshot_weightings.objective, axis=0).sum() * (
             network.links.loc["NA_Wind"].marginal_cost
-        )
-    else:
-        results.Wert["Erträge Elektrolyseurbetrieb"] = "-"
+        ) + network.links_t.p0["H2_Sp"].mul(network.snapshot_weightings.objective, axis=0).sum() * (
+            network.links.loc["H2_Sp"].marginal_cost)
+        
+        results.Wert[" - Erträge Elektrolyseurbetrieb"] = network.links_t.p0["H2_Sp"].mul(network.snapshot_weightings.objective, axis=0).sum() * (
+            network.links.loc["H2_Sp"].marginal_cost)
+        
+        results.Wert[" - Erträge Netzeinspeisung WKA"] = network.links_t.p0["NA_Wind"].mul(network.snapshot_weightings.objective, axis=0).sum() * (
+            network.links.loc["NA_Wind"].marginal_cost)
+            
+        results.Wert["Erzeugung WKA/Elektrolyseur"] = network.links_t.p0[
+            "NA_Wind"].mul(network.snapshot_weightings.objective, axis=0).sum() + network.links_t.p0[
+            "H2_Sp"].mul(network.snapshot_weightings.objective, axis=0).sum() + network.links_t.p1[
+            "PtH2+heat_heat"].mul(network.snapshot_weightings.objective, axis=0).sum()
+        
+        results.Wert[" - Erzeugung Wasserstoff"] = network.links_t.p0["H2_Sp"].mul(network.snapshot_weightings.objective, axis=0).sum()
 
+        results.Wert[" - Erzeugung Abwärme"] = (-1)*network.links_t.p1["PtH2+heat_heat"].mul(network.snapshot_weightings.objective, axis=0).sum()
+        
+        results.Wert[" - Netzeinspeisung WKA"] = network.links_t.p0["NA_Wind"].mul(network.snapshot_weightings.objective, axis=0).sum()
+    else:
+        results.Wert["Erträge WKA/Elektrolyseurbetrieb"] = "-"
+        results.Wert[" - Erträge Elektrolyseurbetrieb"] = "-"
+        results.Wert[" - Erträge Netzeinspeisung WKA"] = "-"
+        
     results.Wert["Kosten aus Netzbezug"] = network.generators_t.p["NeAn"].groupby(
         np.arange(len(network.snapshots)) // res
     ).mean().sum() * (network.generators.loc["NeAn"].marginal_cost)
