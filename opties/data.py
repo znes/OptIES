@@ -57,7 +57,7 @@ def import_data(args):
 
 
 def import_timeseries(args):
-    path = args["path"]  # +"timeseries/"
+    path = args["path"] +"timeseries/"
     use_real_data = args["use_real_data"]
     temporal = args["temporal_resolution"]
 
@@ -328,33 +328,62 @@ def create_pypsa_network(
             capital_cost=link.capital_cost,
         )
 
-    
     # heat pump
     
-    def cop(t_source, t_sink=55):
+    def calculate_cop_air(t_source, t_sink=55):
         delta_t = t_sink - t_source
-        return 6.81 - 0.121 * delta_t + 0.000630 * delta_t**2
-        
-    url = "https://tubcloud.tu-berlin.de/s/S4jRAQMP5Te96jW/download/ninja_weather_country_DE_merra-2_population_weighted.csv"
-    temp = pd.read_csv(url, skiprows=2, index_col=0, parse_dates=True).loc[
-    "2014", "temperature"]
+        return 6.81 - 0.121 * delta_t + 0.000630 * delta_t**2   # according to Brown et. al: Synergies of sector coupling and transmission reinforcement in a cost-optimised, highlyrenewable European energy system", 2018, p. 8
+    def calculate_cop_soil(t_source, t_sink=55):
+        delta_t = t_sink - t_source
+        return 8.77 - 0.15 * delta_t + 0.000734 * delta_t**2
     
-    mean_cop = cop(temp).mean()
-    #cop(temp).plot(figsize=(10, 2), ylabel="COP");
-     
+    temp_air = pd.read_csv("data/wetterdaten/wetterdaten_2011_Luft.csv").set_index("MESS_DATUM")
+    temp_soil_1m = pd.read_csv("data/wetterdaten/wetterdaten_2011_Boden.csv").set_index("MESS_DATUM")
+    temp_soil_100m = 15
+    
+    cop_air = calculate_cop_air(temp_air['TT_TU'])   
+    cop_soil_1m = calculate_cop_soil(temp_soil_1m['V_TE100']) 
+    cop_soil_100m = calculate_cop_soil(temp_soil_100m)
+    
     network.add(
     "Link",
-    name="heat_pump",
+    name="HP_air",
     carrier="heat",
     bus0="IES",
     bus1="BGA_W",
     p_nom=100,
     p_nom_min=0,
-    efficiency= mean_cop, #cop(temp),
+    efficiency=cop_air.values.tolist(),
+    p_nom_extendable=True,
+    marginal_cost=0,
+    capital_cost=178394,  # €/MWe/a  source: https://www.google.com/url?sa=t&source=web&rct=j&opi=89978449&url=https://europeanclimate.org/wp-content/uploads/2019/11/14-03-2019-ffe-2050-cost-assumptions.xlsx&ved=2ahUKEwjBmfjE3tiIAxWK9wIHHTFWKV8QFnoECBQQAQ&usg=AOvVaw1s8R5McxrTb1chk4xvMZp5
+    )
+    network.add(
+    "Link",
+    name="HP_soil_1m",
+    carrier="heat",
+    bus0="IES",
+    bus1="BGA_W",
+    p_nom=100,
+    p_nom_min=0,
+    efficiency= cop_soil_1m.values.tolist(),
     p_nom_extendable=True,
     marginal_cost=100,
-    capital_cost=0,  # €/MWe/a
-)
+    capital_cost=305073,  # €/MWe/a  source: https://www.google.com/url?sa=t&source=web&rct=j&opi=89978449&url=https://europeanclimate.org/wp-content/uploads/2019/11/14-03-2019-ffe-2050-cost-assumptions.xlsx&ved=2ahUKEwjBmfjE3tiIAxWK9wIHHTFWKV8QFnoECBQQAQ&usg=AOvVaw1s8R5McxrTb1chk4xvMZp5
+    )
+    network.add(
+    "Link",
+    name="HP_soil_100m",
+    carrier="heat",
+    bus0="IES",
+    bus1="BGA_W",
+    p_nom=100,
+    p_nom_min=0,
+    efficiency= cop_soil_100m,
+    p_nom_extendable=True,
+    marginal_cost=100,
+    capital_cost=344409,  # €/MWe/a  source: https://www.google.com/url?sa=t&source=web&rct=j&opi=89978449&url=https://europeanclimate.org/wp-content/uploads/2019/11/14-03-2019-ffe-2050-cost-assumptions.xlsx&ved=2ahUKEwjBmfjE3tiIAxWK9wIHHTFWKV8QFnoECBQQAQ&usg=AOvVaw1s8R5McxrTb1chk4xvMZp5
+    )
     
     
     # Loads
