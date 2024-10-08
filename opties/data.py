@@ -454,6 +454,8 @@ def emob_potentials(network):
 
     ls = network.loads.index[network.loads.index.str.startswith("LS")]
     p = network.loads_t.p_set[ls]
+    p.columns = np.array([s[3:] if len(s) > 4 else s for s in p.columns])
+    ls = np.array([s[3:] if len(s) > 4 else s for s in ls])
 
     ## Parametrisierung nach Heitkoetter et. al (doi:https://doi.org/10.1016/j.adapen.2020.100001)
     pmax, pmin, emax, emin, pnom, enom = calc_flex_potentials(p, 5, 0.07, 0, 0.25, 1)
@@ -470,17 +472,17 @@ def emob_potentials(network):
     for ev in ls:
         network.add(
             "Bus",
-            name=ev + "_flex",
+            name=ev + "_emobflex",
             carrier="AC",
             v_nom=0.4,
         )
 
         network.add(
             "Link",
-            name=ev + "_flex",
+            name=ev + "_emobflex",
             carrier="AC",
             bus0=ev,
-            bus1=ev + "_flex",
+            bus1=ev + "_emobflex",
             p_nom_extendable=False,
             p_nom=pnom[ev],
             p_min_pu=pminpu[ev],
@@ -492,9 +494,9 @@ def emob_potentials(network):
 
         network.add(
             "Store",
-            name=ev + "_flex",
+            name=ev + "_emobflex",
             carrier="AC",
-            bus=ev + "_flex",
+            bus=ev + "_emobflex",
             e_nom_extendable=False,
             e_nom=enom[ev],
             e_min_pu=eminpu[ev],
@@ -515,8 +517,9 @@ def dsm_potentials(network):
 
     an = network.loads.index[
         network.loads.index.str.startswith("AN")
-        | network.loads.index.str.startswith("KN")
+        | (network.loads.index.str.startswith("KN"))
     ]
+    an = an[an.str.len()<=4]
     # an = an.drop('AN1')
 
     ## zeitabhängige Potentiale verschiedener Anwendungen berechnen
@@ -596,6 +599,65 @@ def dsm_potentials(network):
             marginal_cost=0,
             capital_cost=0,
         )
+        
+
+def heatpumps_potentials(network):
+    # Implementierung nach Heitkoetter et. al (doi:https://doi.org/10.1016/j.adapen.2020.100001)
+
+    hp = network.loads.index[network.loads.index.str.endswith("WP")]
+    p = network.loads_t.p_set[hp]
+    p.columns = np.array([s[:4] if len(s) > 4 else s for s in p.columns])
+    hp = np.array([s[:4] if len(s) > 4 else s for s in hp])
+
+    ## Parametrisierung nach Heitkoetter et. al (doi:https://doi.org/10.1016/j.adapen.2020.100001)
+    pmax, pmin, emax, emin, pnom, enom = calc_flex_potentials(p, 3, 0.22, 0, 0.75, 0.4)
+    pmax[
+        pmax < 0.00001
+    ] = 0  # vernachlässigbare Potentiale (< durch 0 ersetzen für bessere Lösbarkeit
+    pmin[pmin > -0.00001] = 0
+
+    pmaxpu = pmax / pnom
+    pminpu = pmin / pnom
+    emaxpu = emax / enom
+    eminpu = emin / enom
+
+    for wp in hp:
+        network.add(
+            "Bus",
+            name=wp + "_wpflex",
+            carrier="AC",
+            v_nom=0.4,
+        )
+
+        network.add(
+            "Link",
+            name=wp + "_wpflex",
+            carrier="AC",
+            bus0=wp,
+            bus1=wp + "_wpflex",
+            p_nom_extendable=False,
+            p_nom=pnom[wp],
+            p_min_pu=pminpu[wp],
+            p_max_pu=pmaxpu[wp],
+            efficiency=1,
+            marginal_cost=0,
+            capital_cost=0,
+        )
+
+        network.add(
+            "Store",
+            name=wp + "_wpflex",
+            carrier="AC",
+            bus=wp + "_wpflex",
+            e_nom_extendable=False,
+            e_nom=enom[wp],
+            e_min_pu=eminpu[wp],
+            e_max_pu=emaxpu[wp],
+            standing_loss=0,
+            e_cyclic=True,
+            marginal_cost=0,
+            capital_cost=0,
+        )
 
 
 def adapt_settings(network, args):
@@ -621,6 +683,7 @@ def adapt_settings(network, args):
 
     if "dsm" in args["flexible_components"]:
         dsm_potentials(network)
+        heatpumps_potentials(network)
 
     # ausbaubare Komponenten
 

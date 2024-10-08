@@ -48,8 +48,8 @@ args = {
     "IES_extension": {
         "extension": True,  # lines will be extendable
         "postEEG": False,  # only postEEG-capacities
-        "electrolyser-prio": True,
-        "electrolyser-extendable": True, 
+        "electrolyser-prio": False,
+        "electrolyser-extendable": False, 
     },
     "method": {
         "type": "lopf",

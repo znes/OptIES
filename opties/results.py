@@ -175,14 +175,30 @@ def dsm_potential_usage(network):
 
 def emob_potential_usage(network):
     pot = (
-        network.links[network.links.index.str.contains("_flex")].p_nom
+        network.links[network.links.index.str.contains("_emobflex")].p_nom
         * network.links_t.p_max_pu[
-            network.links[network.links.index.str.contains("_flex")].index
+            network.links[network.links.index.str.contains("_emobflex")].index
         ].mean()
     ).sum() * 1000
     use = (
         network.links_t.p0[
-            network.links[network.links.index.str.contains("_flex")].index
+            network.links[network.links.index.str.contains("_emobflex")].index
+        ].clip(lower=0)
+    ).sum().sum() * 1000
+
+    return pot, use
+
+
+def hp_potential_usage(network):
+    pot = (
+        network.links[network.links.index.str.contains("_wpflex")].p_nom
+        * network.links_t.p_max_pu[
+            network.links[network.links.index.str.contains("_wpflex")].index
+        ].mean()
+    ).sum() * 1000
+    use = (
+        network.links_t.p0[
+            network.links[network.links.index.str.contains("_wpflex")].index
         ].clip(lower=0)
     ).sum().sum() * 1000
 
@@ -431,6 +447,8 @@ def calc_results(network):
             "E-Mobilität - Nutzung",
             "DSM - durchschnittliches Potential",
             "DSM - Nutzung",
+            "private Wärmepumpen - durchschnittliches Potential",
+            "private Wärmepumpen - Nutzung",
             "Anteil der Stunden mit Lastdeckung durch PV(+WKA)",
             "Anteil PV(+WKA) an Stromversorgung IES",
             "Treibhausgasemissionen Stromversorgung IES",
@@ -864,5 +882,11 @@ def calc_results(network):
     )[0]
 
     results.Wert["E-Mobilität - Nutzung"] = emob_potential_usage(network)[1]
+    
+    results.Wert["private Wärmepumpen - durchschnittliches Potential"] = hp_potential_usage(
+        network
+    )[0]
+
+    results.Wert["private Wärmepumpen - Nutzung"] = hp_potential_usage(network)[1]
 
     return results

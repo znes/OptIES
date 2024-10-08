@@ -132,7 +132,7 @@ def emob_potential_usage(network, snapshots=[0, 8759], hour="5H"):
     ax.set_ylabel("Flexibilität durch E-Mobilität: Potential und Nutzung in kW")
     ax.set_xlabel("Zeitschritte")
 
-    emob = network.links[network.links.index.str.contains("flex")]
+    emob = network.links[network.links.index.str.contains("emobflex")]
     ax.plot(
         (
             (network.links_t.p0[emob.index].iloc[snapshots[0] : snapshots[1]])
