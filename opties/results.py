@@ -219,9 +219,11 @@ def calc_autarkiegrad(network):
     )
 
     diff = pv_gen >= loads
-    diff.value_counts(True)
-
-    share_of_autarkic_hours = (diff.value_counts()[1] / 8760) * 100
+    
+    if len(diff.value_counts()) > 1:
+        share_of_autarkic_hours = (diff.value_counts()[1] / 8760) * 100
+    else:
+        share_of_autarkic_hours = 0
 
     return share_of_autarkic_hours
 
