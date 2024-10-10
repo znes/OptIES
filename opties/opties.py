@@ -49,7 +49,7 @@ args = {
         "extension": True,  # lines will be extendable
         "postEEG": False,  # only postEEG-capacities
         "electrolyser-prio": False,
-        "electrolyser-extendable": False, 
+        "electrolyser-extendable": False,
     },
     "method": {
         "type": "lopf",

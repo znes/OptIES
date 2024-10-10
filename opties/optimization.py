@@ -282,13 +282,13 @@ def trocknungsanlage_pyomo(n, sns, val):
 
 
 def PtH2_priority_rule(network, snapshots):
-    def priority_rule(model,snapshot):
+    def priority_rule(model, snapshot):
         p_wind = network.generators_t.p_max_pu.loc[snapshot, 'WKA']
         max_p = network.links.loc["PtH2"]["p_nom"]
         
-        rhs = min(max_p, p_wind)
+        rhs = min(max_p, p_wind) 
         lhs = model.link_p["PtH2", snapshot] + model.link_p["PtH2+heat", snapshot] + model.link_p["PtH2+heat_heat", snapshot]
-        
+
         return rhs == lhs
     
     setattr(
@@ -297,11 +297,11 @@ def PtH2_priority_rule(network, snapshots):
         Constraint(list(snapshots), rule=priority_rule),
     )
 
-        
+      
 def PtH2_capacity_limit(network, snapshots):
     def PtH2_limit(model,snapshot):
         lhs = model.link_p["PtH2", snapshot] + model.link_p["PtH2+heat", snapshot] + model.link_p["PtH2+heat_heat", snapshot] 
-        rhs =  network.links.loc["PtH2"]["p_nom"] 
+        rhs =  network.links.loc['PtH2', 'p_nom']
         
         return lhs <= rhs 
     
@@ -353,9 +353,7 @@ class Constraints:
         
         if args["IES_extension"]["extension"]:
             PtH2_waste_heat_constraint(network, snapshots)
-            PtH2_capacity_limit(network, snapshots)
-        if not args["IES_extension"]["electrolyser-extendable"]:
-            print('heyaaaa')
-            #PtH2_capacity_limit(network, snapshots)
+            if not args["IES_extension"]["electrolyser-extendable"]:
+                PtH2_capacity_limit(network, snapshots)
         
             
