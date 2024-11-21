@@ -270,6 +270,7 @@ def calc_pv_share_of_load(network):
         .sum()
         .sum()
     )
+    print("PV:", production_pv)
 
     if len(network.generators[network.generators.carrier == "Wind"]) > 0:
         usage_wind = (
@@ -280,6 +281,8 @@ def calc_pv_share_of_load(network):
         )
     else:
         usage_wind = 0
+    
+    print("Wind:", usage_wind)
 
     load_ies = (
         network.loads_t.p_set[
@@ -294,8 +297,12 @@ def calc_pv_share_of_load(network):
         .sum()
         .sum()
     )
+    
+    print("Loads:", load_ies)
 
     pv_share_of_load = ((production_pv + usage_wind) / load_ies) * 100
+    
+    print("result",pv_share_of_load)
 
     return pv_share_of_load
 
@@ -412,10 +419,10 @@ def calc_results(network):
             "Kosten aus Betrieb der BHKWs (inklusive Biogas)",
             "Erträge aus Trocknungsanlage",
             "Erträge aus Netzeinspeisung BGA",
-            "Erträge WKA/Elektrolyseurbetrieb", 
+            "Erträge Elektrolyseurbetrieb", 
             " - Erträge Elektrolyseurbetrieb",
             " - Erträge Netzeinspeisung WKA",
-            "Erzeugung WKA/Elektrolyseur",
+            "Erzeugung Elektrolyseur",
             " - Erzeugung Wasserstoff",
             " - Erzeugung Abwärme",
             " - Netzeinspeisung WKA",
@@ -537,21 +544,15 @@ def calc_results(network):
     )
 
     if len(network.generators[network.generators.carrier == "Wind"]) > 0:
-        results.Wert["Erträge WKA/Elektrolyseurbetrieb"] = network.links_t.p0[
-            "NA_Wind"
-        ].mul(network.snapshot_weightings.objective, axis=0).sum() * (
-            network.links.loc["NA_Wind"].marginal_cost
-        ) + network.links_t.p0["H2_Sp"].mul(network.snapshot_weightings.objective, axis=0).sum() * (
+        results.Wert["Erträge Elektrolyseurbetrieb"] =  network.links_t.p0["H2_Sp"].mul(network.snapshot_weightings.objective, axis=0).sum() * (
             network.links.loc["H2_Sp"].marginal_cost)
         
         results.Wert[" - Erträge Elektrolyseurbetrieb"] = network.links_t.p0["H2_Sp"].mul(network.snapshot_weightings.objective, axis=0).sum() * (
             network.links.loc["H2_Sp"].marginal_cost)
         
-        results.Wert[" - Erträge Netzeinspeisung WKA"] = network.links_t.p0["NA_Wind"].mul(network.snapshot_weightings.objective, axis=0).sum() * (
-            network.links.loc["NA_Wind"].marginal_cost)
+
             
-        results.Wert["Erzeugung WKA/Elektrolyseur"] = network.links_t.p0[
-            "NA_Wind"].mul(network.snapshot_weightings.objective, axis=0).sum() + network.links_t.p0[
+        results.Wert["Erzeugung Elektrolyseur"] =  network.links_t.p0[
             "H2_Sp"].mul(network.snapshot_weightings.objective, axis=0).sum() + network.links_t.p1[
             "PtH2+heat_heat"].mul(network.snapshot_weightings.objective, axis=0).sum()
         
@@ -559,9 +560,9 @@ def calc_results(network):
 
         results.Wert[" - Erzeugung Abwärme"] = (-1)*network.links_t.p1["PtH2+heat_heat"].mul(network.snapshot_weightings.objective, axis=0).sum()
         
-        results.Wert[" - Netzeinspeisung WKA"] = network.links_t.p0["NA_Wind"].mul(network.snapshot_weightings.objective, axis=0).sum()
+        #results.Wert[" - Netzeinspeisung WKA"] = network.links_t.p0["NA_Wind"].mul(network.snapshot_weightings.objective, axis=0).sum()
     else:
-        results.Wert["Erträge WKA/Elektrolyseurbetrieb"] = "-"
+        results.Wert["Erträge Elektrolyseurbetrieb"] = "-"
         results.Wert[" - Erträge Elektrolyseurbetrieb"] = "-"
         results.Wert[" - Erträge Netzeinspeisung WKA"] = "-"
         
@@ -755,11 +756,19 @@ def calc_results(network):
     )
 
     if len(network.generators[network.generators.carrier == "Wind"]) > 0:
-        results.Wert["Verwendung für Elektrolyseur"] = (
-            network.links_t.p0["NA_Wind"]
+        results.Wert["Verwendung für Elektrolyseur"] = ((
+            network.links_t.p0["PtH2"]
             .groupby(np.arange(len(network.snapshots)) // res)
             .mean()
-            .sum()
+            .sum() )   
+            +( network.links_t.p0["PtH2+heat"]
+            .groupby(np.arange(len(network.snapshots)) // res)
+            .mean()
+            .sum()   )
+            + (network.links_t.p0["PtH2+heat_heat"]
+            .groupby(np.arange(len(network.snapshots)) // res)
+            .mean()
+            .sum())
         )
     else:
         results.Wert["Verwendung für Elektrolyseur"] = "-"
