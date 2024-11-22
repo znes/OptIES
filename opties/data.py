@@ -369,7 +369,7 @@ def create_pypsa_network(
     p_nom_min=0,
     efficiency= cop_soil_1m.values.tolist(),
     p_nom_extendable=True,
-    marginal_cost=100,
+    marginal_cost=0,
     capital_cost=305073,  # €/MWe/a  source: https://www.google.com/url?sa=t&source=web&rct=j&opi=89978449&url=https://europeanclimate.org/wp-content/uploads/2019/11/14-03-2019-ffe-2050-cost-assumptions.xlsx&ved=2ahUKEwjBmfjE3tiIAxWK9wIHHTFWKV8QFnoECBQQAQ&usg=AOvVaw1s8R5McxrTb1chk4xvMZp5
     )
     network.add(
@@ -382,7 +382,7 @@ def create_pypsa_network(
     p_nom_min=0,
     efficiency= cop_soil_100m,
     p_nom_extendable=True,
-    marginal_cost=100,
+    marginal_cost=0,
     capital_cost=344409,  # €/MWe/a  source: https://www.google.com/url?sa=t&source=web&rct=j&opi=89978449&url=https://europeanclimate.org/wp-content/uploads/2019/11/14-03-2019-ffe-2050-cost-assumptions.xlsx&ved=2ahUKEwjBmfjE3tiIAxWK9wIHHTFWKV8QFnoECBQQAQ&usg=AOvVaw1s8R5McxrTb1chk4xvMZp5
     )
     
